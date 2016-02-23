@@ -3,7 +3,9 @@
 from setuptools import setup, find_packages
 
 requires = [
-    "click>=6.2"
+    "bitstring>=3.1.3",
+    "click>=6.2",
+    "enum34>=1.1.2"
 ]
 
 __version__ = None
