@@ -3,6 +3,7 @@
 from setuptools import setup, find_packages
 
 requires = [
+    "click>=6.2"
 ]
 
 __version__ = None

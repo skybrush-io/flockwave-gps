@@ -71,7 +71,10 @@ class Request(object):
         parts = urlparse(self.url)
 
         if not self.has_header("Host"):
-            self.add_header("Host", "{0.hostname}".format(parts))
+            if parts.port and parts.port != 80:
+                self.add_header("Host", "{0.hostname}:{0.port}".format(parts))
+            else:
+                self.add_header("Host", "{0.hostname}".format(parts))
         if not self.has_header("Connection"):
             self.add_header("Connection", "close")
 
@@ -81,6 +84,10 @@ class Request(object):
         ))
         for header, value in self.headers.items():
             header = header.encode("ascii")
+            if header == "User-agent":
+                # Some buggy NTRIP servers don't recognize User-agent so we
+                # spell it like this
+                header = "User-Agent"
             value = value.encode("ascii")
             request.write(b"{0}: {1}\r\n".format(header, value))
         request.write(b"\r\n")

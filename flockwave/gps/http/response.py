@@ -31,9 +31,13 @@ class Response(object):
         # later
         self._headers = {}
         with closing(self.sock.makefile("rb", 0)) as fp:
-            line = fp.readline().strip()
-            parts = line.split(None, 2) if line else []
-            if len(parts) < 3 or parts[0] not in ("HTTP/1.1", "ICY"):
+            line = fp.readline()
+            if not line:
+                raise ResponseError("Connection closed unexpectedly by the "
+                                    "remote server")
+
+            parts = line.strip().split(None, 2) if line else []
+            if len(parts) < 3 or parts[0] not in (b"HTTP/1.1", b"ICY"):
                 raise ValueError("Invalid response line: {0!r}".format(line))
 
             self._protocol = parts[0]
@@ -43,7 +47,6 @@ class Response(object):
                                     .format(code))
 
             if self._protocol == b"ICY":
-                # Special case for NTRIP caster version 1; it has no headers
                 return
 
             while line:
