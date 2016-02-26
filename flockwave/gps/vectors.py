@@ -15,7 +15,7 @@ __all__ = ("AltitudeReference", "Altitude",
 class AltitudeReference(Enum):
     """Altitude reference point types for the Altitude_ class."""
 
-    RELATIVE = "relative"
+    HOME = "home"
     MSL = "msl"
 
 
@@ -35,16 +35,16 @@ class Altitude(object):
         return cls(value, reference=AltitudeReference.MSL)
 
     @classmethod
-    def relative(cls, value):
-        """Convenience constructor for a relative altitude.
+    def relative_to_home(cls, value):
+        """Convenience constructor for a relative-to-home altitude.
 
         Parameters:
-            value (float): the relative altitude
+            value (float): the relative-to-home altitude
 
         Returns:
             Altitude: an appropriate altitude object
         """
-        return cls(value, reference=AltitudeReference.RELATIVE)
+        return cls(value, reference=AltitudeReference.HOME)
 
     def __init__(self, value=0.0, reference=AltitudeReference.MSL):
         """Constructor.
