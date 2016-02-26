@@ -12,7 +12,11 @@ __all__ = ("AltitudeReference", "Altitude",
            "FlatEarthToGPSCoordinateTransformation")
 
 
-AltitudeReference = Enum("AltitudeReference", "RELATIVE MSL")
+class AltitudeReference(Enum):
+    """Altitude reference point types for the Altitude_ class."""
+
+    RELATIVE = "relative"
+    MSL = "msl"
 
 
 class Altitude(object):
@@ -57,6 +61,14 @@ class Altitude(object):
     def copy(self):
         """Returns a copy of the current altitude object."""
         return self.__class__(value=self._value, reference=self.reference)
+
+    @property
+    def json(self):
+        """Returns the JSON representation of the altitude."""
+        return {
+            "reference": self.reference.value,
+            "value": self._value
+        }
 
     def update_from(self, other):
         """Updates this altitude object from another one.
@@ -141,6 +153,11 @@ class ECEFCoordinate(object):
         else:
             raise TypeError("expected ECEFPosition, got {0!r}".
                             format(type(other)))
+
+    @property
+    def json(self):
+        """Returns the JSON representation of the coordinate."""
+        return {"x": self._x, "y": self._y, "z": self._z}
 
     @property
     def x(self):
@@ -228,6 +245,14 @@ class GPSCoordinate(AltitudeMixin):
         )
 
     @property
+    def json(self):
+        """Returns the JSON representation of the coordinate."""
+        result = {"lat": self._lat, "lon": self._lon}
+        if self.alt is not None:
+            result["alt"] = self._alt.json
+        return result
+
+    @property
     def lat(self):
         """The latitude of the coordinate."""
         return self._lat
@@ -296,6 +321,14 @@ class FlatEarthCoordinate(AltitudeMixin):
             x=self.x, y=self.y,
             alt=self.alt.copy() if self.alt is not None else None
         )
+
+    @property
+    def json(self):
+        """Returns the JSON representation of the coordinate."""
+        result = {"x": self._x, "y": self._y}
+        if self.alt is not None:
+            result["alt"] = self._alt.json
+        return result
 
     def update(self, x=None, y=None, alt=None):
         """Updates the coordinates of this object.
@@ -491,6 +524,5 @@ class FlatEarthToGPSCoordinateTransformation(object):
         return GPSCoordinate(
             lat=lat_in_radians / PI_OVER_180 + self._origin_lat,
             lon=lon_in_radians / PI_OVER_180 + self._origin_lon,
-            altRel=coord.altRel,
-            altMSL=coord.altMSL
+            alt=coord.alt.copy() if coord.alt is not None else None
         )
