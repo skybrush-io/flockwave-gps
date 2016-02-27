@@ -2,9 +2,11 @@
 
 from __future__ import division, print_function
 
+from abc import ABCMeta, abstractmethod
 from bitstring import ConstBitStream
 from enum import Enum
 from flockwave.gps.crc import crc24q
+from six import with_metaclass
 from .packets import RTCMV2Packet, RTCMV3Packet
 
 
@@ -28,7 +30,7 @@ class ChecksumError(RuntimeError):
         self.parity = parity
 
 
-class RTCMParser(object):
+class RTCMParser(with_metaclass(ABCMeta, object)):
     """Superclass for RTCM V2 and V3 parsers."""
 
     def __init__(self, callback=None, max_packet_length=None):
@@ -66,16 +68,19 @@ class RTCMParser(object):
                                                                    ex.parity):
                     yield packet
 
+    @abstractmethod
     def reset(self):
         """Resets the state of the parser. The default implementation is
         empty; should be overridden in subclasses.
         """
         raise NotImplementedError
 
+    @abstractmethod
     def _feed_byte(self, byte):
         """Feeds a new byte to the parser."""
         raise NotImplementedError
 
+    @abstractmethod
     def _recover_from_checksum_mismatch(self, packet, parity):
         """Tries to recover from a checksum-mismatched packet by looking for
         the next preamble byte in the stream and truncating the internal

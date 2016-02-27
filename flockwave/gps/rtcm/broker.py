@@ -4,8 +4,10 @@ and dispatches them to consumers.
 
 from __future__ import absolute_import, print_function
 
+from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import defaultdict
 from select import select
+from six import with_metaclass
 from time import time
 from .packets import RTCMV3Packet
 from .parser import RTCMV3Parser
@@ -154,16 +156,17 @@ class RTCMPacketProducer(object):
                 return []
 
 
-class RTCMPacketConsumer(object):
+class RTCMPacketConsumer(with_metaclass(ABCMeta, object)):
     """Base class for objects that consume RTCM packets of specific types."""
 
-    @property
+    @abstractproperty
     def accepts(self):
         """Returns an iterable of classes that this packet consumer is
         interested in.
         """
         raise NotImplementedError
 
+    @abstractmethod
     def __call__(self, packet, producer):
         """Handles the given RTCM packet.
 
