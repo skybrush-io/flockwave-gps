@@ -122,10 +122,8 @@ class AltitudeMixin(object):
             self._alt.update_from(value)
 
 
-class ECEFCoordinate(object):
-    """ECEF (Earth Centered, Earth Fixed) position vector. Coordinates must
-    be given in metres.
-    """
+class Vector3D(object):
+    """Generic 3D vector."""
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
         """Constructor.
@@ -140,18 +138,22 @@ class ECEFCoordinate(object):
         self.y = y
         self.z = z
 
+    def copy(self):
+        """Creates a copy of this vector."""
+        return self.__class__(x=self.x, y=self.y, z=self.z)
+
     def distance(self, other):
         """Returns the distance between this position and another ECEF
         position vector.
         """
-        if isinstance(other, ECEFCoordinate):
+        if isinstance(other, Vector3D):
             return (
                 (self._x - other._x) ** 2 +
                 (self._y - other._y) ** 2 +
                 (self._z - other._z) ** 2
             ) ** 0.5
         else:
-            raise TypeError("expected ECEFPosition, got {0!r}".
+            raise TypeError("expected Vector3D, got {0!r}".
                             format(type(other)))
 
     @property
@@ -215,6 +217,14 @@ class ECEFCoordinate(object):
         return self.__class__(
             x=self.x * other, y=self.y * other, z=self.z * other
         )
+
+
+class ECEFCoordinate(Vector3D):
+    """ECEF (Earth Centered, Earth Fixed) position vector. Coordinates must
+    be given in metres.
+    """
+
+    pass
 
 
 class GPSCoordinate(AltitudeMixin):
