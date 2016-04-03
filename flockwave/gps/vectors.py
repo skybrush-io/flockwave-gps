@@ -140,11 +140,12 @@ class Vector3D(object):
 
     def copy(self):
         """Creates a copy of this vector."""
-        return self.__class__(x=self.x, y=self.y, z=self.z)
+        # Don't use keyword arguments below; it would break VelocityNED
+        return self.__class__(self.x, self.y, self.z)
 
     def distance(self, other):
-        """Returns the distance between this position and another ECEF
-        position vector.
+        """Returns the distance between this position and another 3D
+        vector.
         """
         if isinstance(other, Vector3D):
             return (
@@ -155,6 +156,34 @@ class Vector3D(object):
         else:
             raise TypeError("expected Vector3D, got {0!r}".
                             format(type(other)))
+
+    def update(self, x=None, y=None, z=None):
+        """Updates the coordinates of this object.
+
+        Parameters:
+            x (Optional[float]): the new X coordinate; ``None`` means to
+                leave the current value intact.
+            y (Optional[float]): the new Y coordinate; ``None`` means to
+                leave the current value intact.
+            z (Optional[float]): the Z coordinate; ``None`` means to
+                leave the current value intact.
+        """
+        if x is not None:
+            self.x = x
+        if y is not None:
+            self.y = y
+        if z is not None:
+            self.z = z
+
+    def update_from(self, other):
+        """Updates the coordinates of this object from another instance
+        of Vector3D_.
+
+        Parameters:
+            other (Vector3D): the other object to copy the values from.
+        """
+        # Don't use keyword arguments below; it would break VelocityNED
+        self.update(other.x, other.y, other.z)
 
     @property
     def json(self):
@@ -189,8 +218,9 @@ class Vector3D(object):
         self._z = float(value)
 
     def __floordiv__(self, other):
+        # Don't use keyword arguments below; it would break VelocityNED
         return self.__class__(
-            x=self._x // other, y=self._y // other, z=self._z // other
+            self._x // other, self._y // other, self._z // other
         )
 
     def __ifloordiv__(self, other):
@@ -209,14 +239,89 @@ class Vector3D(object):
         self._z /= other
 
     def __truediv__(self, other):
+        # Don't use keyword arguments below; it would break VelocityNED
         return self.__class__(
-            x=self.x / other, y=self.y / other, z=self.z / other
+            self.x / other, self.y / other, self.z / other
         )
 
     def __mul__(self, other):
+        # Don't use keyword arguments below; it would break VelocityNED
         return self.__class__(
-            x=self.x * other, y=self.y * other, z=self.z * other
+            self.x * other, self.y * other, self.z * other
         )
+
+    def __repr__(self):
+        return "{0.__class__.__name__}(x={0.x!r}, y={0.y!r}, z={0.z!r})"\
+            .format(self)
+
+
+class VelocityNED(Vector3D):
+    """NED (North-East-Down) velocity vector.
+
+    The property named ``north`` is aliased to ``x``; ``east`` is aliased
+    to ``y`` and ``down`` is aliased to ``z``. The JSON representation of
+    this class is updated to be conformant with the Flockwave protocol
+    specification.
+    """
+
+    def __init__(self, north=0.0, east=0.0, down=0.0, **kwds):
+        """Constructor.
+
+        Parameters:
+            north (float): the north coordinate
+            east (float): the east coordinate
+            down (float): the down coordinate
+        """
+        super(VelocityNED, self).__init__(x=north, y=east, z=down)
+
+    def update(self, north=None, east=None, down=None):
+        """Updates the coordinates of this object.
+
+        Parameters:
+            north (Optional[float]): the new north coordinate; ``None``
+                means to leave the current value intact.
+            east (Optional[float]): the new east coordinate; ``None`` means
+                to leave the current value intact.
+            down (Optional[float]): the down coordinate; ``None`` means to
+                leave the current value intact.
+        """
+        super(VelocityNED, self).update(north, east, down)
+
+    @Vector3D.json.getter
+    def json(self):
+        """Returns the JSON representation of the coordinate."""
+        return {"north": self._x, "east": self._y, "down": self._z}
+
+    @property
+    def north(self):
+        """The north coordinate."""
+        return self.x
+
+    @north.setter
+    def north(self, value):
+        self.x = value
+
+    @property
+    def east(self):
+        """The east coordinate."""
+        return self.y
+
+    @east.setter
+    def east(self, value):
+        self.y = value
+
+    @property
+    def down(self):
+        """The down coordinate."""
+        return self.z
+
+    @down.setter
+    def down(self, value):
+        self.z = value
+
+    def __repr__(self):
+        return "{0.__class__.__name__}(north={0.north!r}, east={0.east!r},"\
+            " down={0.down!r})".format(self)
 
 
 class ECEFCoordinate(Vector3D):
@@ -238,7 +343,7 @@ class GPSCoordinate(AltitudeMixin):
         Parameters:
             lat (float): the latitude
             lon (float): the longitude
-            alt (Altitude or None): the altitude (relative or MSL);
+            alt (Optional[Altitude]): the altitude (relative or MSL);
                 ``None`` if not known
         """
         AltitudeMixin.__init__(self)
@@ -284,11 +389,11 @@ class GPSCoordinate(AltitudeMixin):
         """Updates the coordinates of this object.
 
         Parameters:
-            lat (float or None): the new latitude; ``None`` means to
+            lat (Optional[float]): the new latitude; ``None`` means to
                 leave the current value intact.
-            lon (float or None): the new longitude; ``None`` means to
+            lon (Optional[float]): the new longitude; ``None`` means to
                 leave the current value intact.
-            alt (Altitude or None): the new altitude; ``None`` means to
+            alt (Optional[Altitude]): the new altitude; ``None`` means to
                 leave the current value intact.
         """
         if lat is not None:
@@ -317,7 +422,7 @@ class FlatEarthCoordinate(AltitudeMixin):
         Parameters:
             x (float): the X coordinate
             y (float): the Y coordinate
-            alt (Altitude or None): the altitude (relative or MSL);
+            alt (Optional[Altitude]): the altitude (relative or MSL);
                 ``None`` if not known
         """
         AltitudeMixin.__init__(self)
@@ -344,11 +449,11 @@ class FlatEarthCoordinate(AltitudeMixin):
         """Updates the coordinates of this object.
 
         Parameters:
-            x (float or None): the new X coordinate; ``None`` means to
+            x (Optional[float]): the new X coordinate; ``None`` means to
                 leave the current value intact.
-            y (float or None): the new Y coordinate; ``None`` means to
+            y (Optional[float]): the new Y coordinate; ``None`` means to
                 leave the current value intact.
-            alt (Altitude or None): the new altitude; ``None`` means to
+            alt (Optional[Altitude]): the new altitude; ``None`` means to
                 leave the current value intact.
         """
         if x is not None:
