@@ -11,11 +11,23 @@ __all__ = ("WGS84", "GPS_PI", "PI_OVER_180",
 class WGS84(object):
     """WGS84 ellipsoid model parameters for Earth."""
 
+    ####################################################################
+    # Defining parameters of WGS84 come first
+
     #: Equatorial radius of Earth in the WGS ellipsoid model
     EQUATORIAL_RADIUS_IN_METERS = 6378137.0
 
     #: Inverse flattening of Earth in the WGS ellipsoid model
     INVERSE_FLATTENING = 298.257223563
+
+    #: Gravitational constant times Earth's mass
+    GRAVITATIONAL_CONSTANT_TIMES_MASS = 3.986005e+14
+
+    #: Earth's rotation rate [rad/sec]
+    ROTATION_RATE_IN_RADIANS_PER_SEC = 7.2921151467e-5
+
+    ####################################################################
+    # Non-defining parameters of WGS84 are below
 
     #: Flattening of Earth in the WGS ellipsoid model
     FLATTENING = 1.0 / INVERSE_FLATTENING
@@ -29,11 +41,9 @@ class WGS84(object):
     #: Polar radius of Earth in the WGS ellipsoid model
     POLAR_RADIUS_IN_METERS = EQUATORIAL_RADIUS_IN_METERS * (1 - FLATTENING)
 
-    #: Gravitational constant times Earth's mass
-    GRAVITATIONAL_CONSTANT_TIMES_MASS = 3.986005e+14
-
-    #: Earth's rotation rate [rad/sec]
-    ROTATION_RATE_IN_RADIANS_PER_SEC = 7.2921151467e-5
+    #: Mean radius of Earth in the WGS ellipsoid model, as defined by IUGG
+    MEAN_RADIUS_IN_METERS = (2 * EQUATORIAL_RADIUS_IN_METERS +
+                             POLAR_RADIUS_IN_METERS) / 3
 
 
 #: pi over 180; multiplicative constant to turn degrees into radians
