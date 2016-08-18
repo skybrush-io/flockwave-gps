@@ -9,7 +9,8 @@ from math import atan2, cos, pi, sin, sqrt
 
 __all__ = ("AltitudeReference", "Altitude",
            "GPSCoordinate", "FlatEarthCoordinate",
-           "FlatEarthToGPSCoordinateTransformation")
+           "FlatEarthToGPSCoordinateTransformation",
+           "ECEFToGPSCoordinateTransformation")
 
 
 class AltitudeReference(Enum):
@@ -538,12 +539,24 @@ class ECEFToGPSCoordinateTransformation(object):
         """Converts the given GPS coordinates to ECEF coordinates.
 
         Parameters:
-            coord (ECEFCoordinate): the coordinate to convert
+            coord (GPSCoordinate): the coordinate to convert
 
         Returns:
-            GPSCoordinate: the converted coordinate
+            ECEFCoordinate: the converted coordinate
         """
-        raise NotImplementedError
+        if coord.alt is None or coord.alt.reference != AltitudeReference.MSL:
+            raise ValueError("GPS coordinates need an altitude relative "
+                             "to the mean sea level")
+
+        lat, lon = coord.lat * PI_OVER_180, coord.lon * PI_OVER_180
+        height = coord.alt.value
+
+        n = self._eq_radius / sqrt(1 - self._ecc_sq * (sin(lat) ** 2))
+        cos_lat = cos(lat)
+        x = (n + height) * cos_lat * cos(lon)
+        y = (n + height) * cos_lat * sin(lon)
+        z = (n * (1 - self._ecc_sq) + height) * sin(lat)
+        return ECEFCoordinate(x=x, y=y, z=z)
 
     def to_gps(self, coord):
         """Converts the given ECEF coordinates to GPS coordinates.
@@ -562,8 +575,8 @@ class ECEFToGPSCoordinateTransformation(object):
                     p - self._ecc_sq_times_eq_radius * (cos(th) ** 3))
         n = self._eq_radius / sqrt(1 - self._ecc_sq * (sin(lat) ** 2))
         alt = p / cos(lat) - n
-        lat = lat * 180 / pi
-        lon = lon * 180 / pi
+        lat = lat / PI_OVER_180
+        lon = lon / PI_OVER_180
         return GPSCoordinate(lat=lat, lon=lon, alt=Altitude.msl(alt))
 
 
