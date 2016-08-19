@@ -430,6 +430,7 @@ class FlatEarthCoordinate(AltitudeMixin):
         self._x, self._y = 0.0, 0.0
         self.x = x
         self.y = y
+        self.alt = alt
 
     def copy(self):
         """Returns a copy of the current flat Earth coordinate object."""
@@ -621,11 +622,11 @@ class FlatEarthToGPSCoordinateTransformation(object):
         eccentricity_sq = WGS84.ECCENTRICITY_SQUARED
 
         origin_lat_in_radians = self._origin_lat * self._pi_over_180
-        self._cos_origin_lat_in_radians = cos(origin_lat_in_radians)
 
         x = (1 - eccentricity_sq * (sin(origin_lat_in_radians) ** 2))
         self._r1 = earth_radius * (1 - eccentricity_sq) / (x ** 1.5)
-        self._r2 = earth_radius / sqrt(x)
+        self._r2_over_cos_origin_lat_in_radians = \
+            earth_radius / sqrt(x) * cos(origin_lat_in_radians)
 
     def to_flat_earth(self, coord):
         """Converts the given GPS coordinates to flat Earth coordinates.
@@ -636,7 +637,12 @@ class FlatEarthToGPSCoordinateTransformation(object):
         Returns:
             FlatEarthCoordinate: the converted coordinate
         """
-        raise NotImplementedError
+        return FlatEarthCoordinate(
+            x=(coord.lat - self._origin_lat) * PI_OVER_180 * self._r1,
+            y=(coord.lon - self._origin_lon) * PI_OVER_180 *
+            self._r2_over_cos_origin_lat_in_radians,
+            alt=coord.alt.copy() if coord.alt is not None else None
+        )
 
     def to_gps(self, coord):
         """Converts the given flat Earth coordinates to GPS coordinates.
@@ -648,7 +654,7 @@ class FlatEarthToGPSCoordinateTransformation(object):
             GPSCoordinate: the converted coordinate
         """
         lat_in_radians = coord.x / self._r1
-        lon_in_radians = coord.y / self._r2 / self._cos_origin_lat_in_radians
+        lon_in_radians = coord.y / self._r2_over_cos_origin_lat_in_radians
         return GPSCoordinate(
             lat=lat_in_radians / PI_OVER_180 + self._origin_lat,
             lon=lon_in_radians / PI_OVER_180 + self._origin_lon,
