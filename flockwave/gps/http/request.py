@@ -2,10 +2,13 @@
 
 import socket
 
+from future import standard_library
+standard_library.install_aliases()
+
 from collections import OrderedDict
+from future.utils import iteritems
 from io import BytesIO
-from urllib import quote
-from urlparse import urlparse
+from urllib.parse import quote, urlparse
 
 from .response import Response
 
@@ -29,7 +32,7 @@ class Request(object):
         self.url = url
         self.data = data
         self.headers = OrderedDict()
-        for key, value in headers.items():
+        for key, value in iteritems(headers):
             self.add_header(key, value)
 
     def add_header(self, key, val):
@@ -82,7 +85,7 @@ class Request(object):
         request.write(b"{0} {1} HTTP/1.1\r\n".format(
             method, quote(parts.path)
         ))
-        for header, value in self.headers.items():
+        for header, value in iteritems(self.headers):
             header = header.encode("ascii")
             if header == "User-agent":
                 # Some buggy NTRIP servers don't recognize User-agent so we

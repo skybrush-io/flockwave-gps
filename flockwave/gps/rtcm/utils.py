@@ -1,6 +1,6 @@
 """Helper functions for RTCM message decoding"""
 
-from six.moves.builtins import range
+from builtins import range
 
 
 __all__ = ("count_bits", )

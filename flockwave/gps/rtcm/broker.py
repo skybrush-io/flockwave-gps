@@ -6,8 +6,8 @@ from __future__ import absolute_import, print_function
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import defaultdict
+from future.utils import iteritems, itervalues, with_metaclass
 from select import select
-from six import with_metaclass
 from time import time
 from .packets import RTCMV3Packet
 from .parser import RTCMV3Parser
@@ -226,7 +226,7 @@ class RTCMPacketBroker(object):
 
     def _calculate_time_to_next_packet(self):
         next_time = None
-        for producer_info in self._producers.values():
+        for producer_info in itervalues(self._producers):
             if producer_info.next_packet_time is None:
                 continue
             if next_time is None:
@@ -278,7 +278,7 @@ class RTCMPacketBroker(object):
         ``autoclose=True``.
         """
         self._assert_not_closed()
-        for producer_info in self._producers.values():
+        for producer_info in itervalues(self._producers):
             if producer_info.autoclose:
                 producer_info.producer.close()
         self._closed = True
@@ -362,7 +362,7 @@ class RTCMPacketBroker(object):
         """
         now = time()
         timed_out = set()
-        for key, producer_info in self._producers.items():
+        for key, producer_info in iteritems(self._producers):
             next_time = producer_info.next_packet_time
             if next_time is not None and next_time < now:
                 timed_out.add(producer_info.producer)
@@ -377,7 +377,7 @@ class RTCMPacketBroker(object):
         :param consumer: the consumer to remove
         :type consumer: RTCMPacketConsumer
         """
-        for cls, consumers in self._consumers.items():
+        for cls, consumers in iteritems(self._consumers):
             consumers.discard(consumer)
 
     def remove_producer(self, producer):
@@ -386,7 +386,7 @@ class RTCMPacketBroker(object):
         :param producer: the producer to remove
         :type producer: RTCMPacketProducer
         """
-        keys_to_delete = [key for key, value in self._producers.items()
+        keys_to_delete = [key for key, value in iteritems(self._producers)
                           if value.producer is producer]
         for key in keys_to_delete:
             del self._producers[key]

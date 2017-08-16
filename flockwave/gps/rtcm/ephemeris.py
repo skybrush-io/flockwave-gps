@@ -4,6 +4,7 @@ from __future__ import division
 
 import logging
 
+from builtins import range
 from collections import namedtuple
 from groundctrl.constants import GPS_PI, WGS84
 from groundctrl.vector import ECEFPosition
@@ -62,7 +63,7 @@ class EphemerisData(_EphemerisData):
         # Kepler equation
         M = self.m0 + n * T
         E = M
-        for i in xrange(20):
+        for i in range(20):
             E_old = E
             E = M + ecc * sin(E)
             if abs(E - E_old) < 1e-12:

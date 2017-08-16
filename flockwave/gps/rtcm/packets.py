@@ -3,6 +3,7 @@
 from __future__ import division
 
 from bitstring import pack
+from builtins import chr, range
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
 from flockwave.gps.vectors import ECEFCoordinate
 from .correction import CorrectionData
@@ -94,7 +95,7 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
 
         num_corrections = num_bits // 40
         corrections = []
-        for i in xrange(num_corrections):
+        for i in range(num_corrections):
             scale_factor = bitstream.read(1).uint
             bitstream.read(2)
             svid = bitstream.read(5).uint
@@ -380,7 +381,7 @@ class RTCMV3GPSRTKPacket(RTCMV3Packet):
         result.smoothing_interval = bitstream.read(3).uint
         result.satellites = []
 
-        for i in xrange(satellite_count):
+        for i in range(satellite_count):
             result.satellites.append(
                 RTCMV3SatelliteInfo.create(bitstream, is_extended, has_l2)
             )
@@ -505,7 +506,7 @@ class RTCMV3AntennaDescriptorPacket(RTCMV3Packet):
     @staticmethod
     def _read_string(bitstream):
         n = bitstream.read(8).uint
-        return "".join(chr(bitstream.read(8).uint) for _ in xrange(n))
+        return "".join(chr(bitstream.read(8).uint) for _ in range(n))
 
     def __repr__(self):
         return "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "\
@@ -678,7 +679,7 @@ class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
     @staticmethod
     def _read_string(bitstream):
         n = bitstream.read(8).uint
-        return "".join(chr(bitstream.read(8).uint) for _ in xrange(n))
+        return "".join(chr(bitstream.read(8).uint) for _ in range(n))
 
     def __repr__(self):
         return "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "\

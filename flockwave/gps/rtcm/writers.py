@@ -5,6 +5,7 @@ Currently we support RTCM V2 only; V3 support may come later.
 
 from __future__ import division
 
+from builtins import next, range
 from bitstring import BitArray, pack
 from itertools import cycle
 from .packets import RTCMV2Packet
@@ -39,7 +40,7 @@ class RTCMV2Writer(object):
             fp (file-like): the stream to write the generated messages to.
         """
         self.fp = fp
-        self.seq_generator = cycle(range(8))
+        self.seq_generator = cycle(list(range(8)))
         self.previous_parities = False, False
 
     def calculate_modified_z_count(self, time_of_week):
@@ -133,9 +134,9 @@ class RTCMV2Writer(object):
         # chunks of 6 bits, each chunk is reversed, then prepended with 01
         # (in binary), and encoded into bytes.
         result = BitArray()
-        for start in xrange(0, len(bits), 24):
+        for start in range(0, len(bits), 24):
             word = self._encode_word(bits[start:(start + 24)])
-            for chunk_start in xrange(0, len(word), 6):
+            for chunk_start in range(0, len(word), 6):
                 result.append((False, True))
                 result.append(reversed(word[chunk_start:(chunk_start + 6)]))
         return result
@@ -188,7 +189,7 @@ class RTCMV2Writer(object):
                              "the GPS time of week")
 
         num_data_words = len(bits) // 24
-        sequence_no = self.seq_generator.next()
+        sequence_no = next(self.seq_generator)
 
         need_padding = num_data_words * 24 < len(bits)
         if need_padding:

@@ -34,7 +34,7 @@ class HaversineTest(unittest.TestCase):
         first = GPSCoordinate(lat=55 + 45 / 60, lon=37 + 37 / 60)
         second = GPSCoordinate(lat=59 + 53 / 60, lon=30 + 15 / 60)
 
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             633184.232, haversine(first, second, datum=PlanetCalcDatum),
             places=3
         )
@@ -43,7 +43,7 @@ class HaversineTest(unittest.TestCase):
         """Tests the Haversine formula for Lyon and Paris."""
         lyon = GPSCoordinate(lat=45.7597, lon=4.8422)
         paris = GPSCoordinate(lat=48.8567, lon=2.3508)
-        self.assertAlmostEquals(
+        self.assertAlmostEqual(
             392216.71780659, haversine(lyon, paris, datum=SimplifiedDatum),
             places=6
         )
