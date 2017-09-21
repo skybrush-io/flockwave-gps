@@ -3,124 +3,44 @@
 from __future__ import absolute_import, division
 
 from .constants import PI_OVER_180, WGS84
-from enum import Enum
 from math import atan2, cos, pi, sin, sqrt
 
 
-__all__ = ("AltitudeReference", "Altitude",
-           "GPSCoordinate", "FlatEarthCoordinate",
+__all__ = ("GPSCoordinate", "FlatEarthCoordinate",
            "FlatEarthToGPSCoordinateTransformation",
            "ECEFToGPSCoordinateTransformation")
 
 
-class AltitudeReference(Enum):
-    """Altitude reference point types for the Altitude_ class."""
-
-    HOME = "home"
-    MSL = "msl"
-
-
-class Altitude(object):
-    """Class representing an altitude."""
-
-    @classmethod
-    def msl(cls, value):
-        """Convenience constructor for an altitude above mean sea level.
-
-        Parameters:
-            value (float): the altitude above mean sea level
-
-        Returns:
-            Altitude: an appropriate altitude object
-        """
-        return cls(value, reference=AltitudeReference.MSL)
-
-    @classmethod
-    def relative_to_home(cls, value):
-        """Convenience constructor for a relative-to-home altitude.
-
-        Parameters:
-            value (float): the relative-to-home altitude
-
-        Returns:
-            Altitude: an appropriate altitude object
-        """
-        return cls(value, reference=AltitudeReference.HOME)
-
-    def __init__(self, value=0.0, reference=AltitudeReference.MSL):
-        """Constructor.
-
-        Parameters:
-            value (float): the altitude
-            reference (AltitudeReference): the reference point of the
-                altitude
-        """
-        self._value = 0.0
-        self.value = value
-        self.reference = reference
-
-    def copy(self):
-        """Returns a copy of the current altitude object."""
-        return self.__class__(value=self._value, reference=self.reference)
-
-    @property
-    def json(self):
-        """Returns the JSON representation of the altitude."""
-        return {
-            "reference": self.reference.value,
-            "value": self._value
-        }
-
-    def update_from(self, other):
-        """Updates this altitude object from another one.
-
-        Parameters:
-            other (Altitude): the altitude object to update this one from
-        """
-        self._value = other._value
-        self.reference = other.reference
-
-    @property
-    def value(self):
-        """The value component of the altitude, in metres."""
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        self._value = float(value)
-
-    def __repr__(self):
-        return "{0.__class__.__name__}(value={0.value}, "\
-               "reference={0.reference})".format(self)
-
-
 class AltitudeMixin(object):
     """Mixin class for objects that have an altitude component. Provides
-    an ``alt`` property with appropriate getters and setters.
+    an ``amsl`` (altitude above mean sea level) and an ``agl`` (altitude
+    above ground level) property with appropriate getters and setters.
     """
 
-    def __init__(self):
+    def __init__(self, amsl=None, agl=None):
         """Constructor."""
-        self._alt = None
+        self._agl = None
+        self._amsl = None
+        self.agl = agl
+        self.amsl = amsl
 
     @property
-    def alt(self):
-        """The altitude of the coordinate. The getter will return a copy
-        of the Altitude_ object embedded in this coordinate; similarly,
-        the setter will make a copy of the altitude being set. This means
-        that you can safely modify the Altitude_ objects outside this
-        class; these modifications will not affect the coordinate itself.
-        """
-        return self._alt.copy() if self._alt is not None else None
+    def agl(self):
+        """The altitude above ground level."""
+        return self._agl
 
-    @alt.setter
-    def alt(self, value):
-        if value is None:
-            self._alt = None
-        elif self._alt is None:
-            self._alt = value.copy()
-        else:
-            self._alt.update_from(value)
+    @agl.setter
+    def agl(self, value):
+        self._agl = float(value) if value is not None else None
+
+    @property
+    def amsl(self):
+        """The altitude above mean sea level."""
+        return self._amsl
+
+    @amsl.setter
+    def amsl(self, value):
+        self._amsl = float(value) if value is not None else None
 
 
 class Vector3D(object):
@@ -357,34 +277,37 @@ class GPSCoordinate(AltitudeMixin):
     and relative or MSL altitude.
     """
 
-    def __init__(self, lat=0.0, lon=0.0, alt=None):
+    def __init__(self, lat=0.0, lon=0.0, amsl=None, agl=None):
         """Constructor.
 
         Parameters:
             lat (float): the latitude
             lon (float): the longitude
-            alt (Optional[Altitude]): the altitude (relative or MSL);
-                ``None`` if not known
+            amsl (Optional[float]): the altitude above mean sea level,
+                if known
+            agl (Optional[float]): the altitude above ground level, if
+                known
         """
-        AltitudeMixin.__init__(self)
+        AltitudeMixin.__init__(self, amsl=amsl, agl=agl)
         self._lat, self._lon = 0.0, 0.0
         self.lat = float(lat)
         self.lon = float(lon)
-        self.alt = alt
 
     def copy(self):
         """Returns a copy of the current GPS coordinate object."""
         return self.__class__(
             lat=self.lat, lon=self.lon,
-            alt=self.alt.copy() if self.alt is not None else None
+            amsl=self.amsl, agl=self.agl
         )
 
     @property
     def json(self):
         """Returns the JSON representation of the coordinate."""
         result = {"lat": self._lat, "lon": self._lon}
-        if self.alt is not None:
-            result["alt"] = self._alt.json
+        if self.amsl is not None:
+            result["amsl"] = self._amsl.json
+        if self.agl is not None:
+            result["agl"] = self._agl.json
         return result
 
     @property
@@ -415,7 +338,8 @@ class GPSCoordinate(AltitudeMixin):
         self._lat = round(self._lat, precision)
         self._lon = round(self._lon, precision)
 
-    def update(self, lat=None, lon=None, alt=None, precision=None):
+    def update(self, lat=None, lon=None, amsl=None, agl=None,
+               precision=None):
         """Updates the coordinates of this object.
 
         Parameters:
@@ -423,8 +347,10 @@ class GPSCoordinate(AltitudeMixin):
                 leave the current value intact.
             lon (Optional[float]): the new longitude; ``None`` means to
                 leave the current value intact.
-            alt (Optional[Altitude]): the new altitude; ``None`` means to
-                leave the current value intact.
+            amsl (Optional[float]): the new altitude above mean sea level;
+                ``None`` means to leave the current value intact.
+            agl (Optional[float]): the new altitude above ground level;
+                ``None`` means to leave the current value intact.
             precision (Optional[int]): the number of decimal digits to
                 round the latitude and longitude to; ``None`` means to take
                 the values as they are
@@ -433,8 +359,10 @@ class GPSCoordinate(AltitudeMixin):
             self.lat = lat
         if lon is not None:
             self.lon = lon
-        if alt is not None:
-            self.alt = alt
+        if amsl is not None:
+            self.amsl = amsl
+        if agl is not None:
+            self.agl = agl
         if precision is not None:
             self.round(precision)
 
@@ -448,41 +376,44 @@ class GPSCoordinate(AltitudeMixin):
                 round the latitude and longitude to; ``None`` means to take
                 the values as they are
         """
-        self.update(lat=other.lat, lon=other.lon, alt=other._alt,
-                    precision=precision)
+        self.update(lat=other.lat, lon=other.lon, amsl=other.amsl,
+                    agl=other.agl, precision=precision)
 
 
 class FlatEarthCoordinate(AltitudeMixin):
     """Class representing a coordinate given in flat Earth coordinates."""
 
-    def __init__(self, x=0.0, y=0.0, alt=None):
+    def __init__(self, x=0.0, y=0.0, amsl=None, agl=None):
         """Constructor.
 
         Parameters:
             x (float): the X coordinate
             y (float): the Y coordinate
-            alt (Optional[Altitude]): the altitude (relative or MSL);
-                ``None`` if not known
+            amsl (Optional[float]): the altitude above mean sea level,
+                if known
+            agl (Optional[float]): the altitude above ground level, if
+                known
         """
-        AltitudeMixin.__init__(self)
+        AltitudeMixin.__init__(self, amsl=amsl, agl=agl)
         self._x, self._y = 0.0, 0.0
         self.x = x
         self.y = y
-        self.alt = alt
 
     def copy(self):
         """Returns a copy of the current flat Earth coordinate object."""
         return self.__class__(
             x=self.x, y=self.y,
-            alt=self.alt.copy() if self.alt is not None else None
+            amsl=self.amsl, agl=self.agl
         )
 
     @property
     def json(self):
         """Returns the JSON representation of the coordinate."""
         result = {"x": self._x, "y": self._y}
-        if self.alt is not None:
-            result["alt"] = self._alt.json
+        if self.amsl is not None:
+            result["amsl"] = self._amsl.json
+        if self.agl is not None:
+            result["agl"] = self._agl.json
         return result
 
     def round(self, precision):
@@ -495,7 +426,7 @@ class FlatEarthCoordinate(AltitudeMixin):
         self._x = round(self._x, precision)
         self._y = round(self._y, precision)
 
-    def update(self, x=None, y=None, alt=None, precision=None):
+    def update(self, x=None, y=None, amsl=None, agl=None, precision=None):
         """Updates the coordinates of this object.
 
         Parameters:
@@ -503,8 +434,10 @@ class FlatEarthCoordinate(AltitudeMixin):
                 leave the current value intact.
             y (Optional[float]): the new Y coordinate; ``None`` means to
                 leave the current value intact.
-            alt (Optional[Altitude]): the new altitude; ``None`` means to
-                leave the current value intact.
+            amsl (Optional[float]): the new altitude above mean sea level;
+                ``None`` means to leave the current value intact.
+            agl (Optional[float]): the new altitude above ground level;
+                ``None`` means to leave the current value intact.
             precision (Optional[int]): the number of decimal digits to
                 round the X and Y to; ``None`` means to take the
                 values as they are
@@ -513,8 +446,10 @@ class FlatEarthCoordinate(AltitudeMixin):
             self.x = x
         if y is not None:
             self.y = y
-        if alt is not None:
-            self.alt = alt
+        if amsl is not None:
+            self.amsl = amsl
+        if agl is not None:
+            self.agl = agl
         if precision is not None:
             self.round(precision)
 
@@ -529,7 +464,7 @@ class FlatEarthCoordinate(AltitudeMixin):
                 round the X and Y to; ``None`` means to take the
                 values as they are
         """
-        self.update(x=other.x, y=other.y, alt=other._alt,
+        self.update(x=other.x, y=other.y, amsl=other.amsl, agl=other.agl,
                     precision=precision)
 
     @property
@@ -602,12 +537,12 @@ class ECEFToGPSCoordinateTransformation(object):
         Returns:
             ECEFCoordinate: the converted coordinate
         """
-        if coord.alt is None or coord.alt.reference != AltitudeReference.MSL:
+        if coord.amsl is None:
             raise ValueError("GPS coordinates need an altitude relative "
                              "to the mean sea level")
 
         lat, lon = coord.lat * PI_OVER_180, coord.lon * PI_OVER_180
-        height = coord.alt.value
+        height = coord.amsl
 
         n = self._eq_radius / sqrt(1 - self._ecc_sq * (sin(lat) ** 2))
         cos_lat = cos(lat)
@@ -632,10 +567,10 @@ class ECEFToGPSCoordinateTransformation(object):
         lat = atan2(z + self._ep_sq_times_polar_radius * (sin(th) ** 3),
                     p - self._ecc_sq_times_eq_radius * (cos(th) ** 3))
         n = self._eq_radius / sqrt(1 - self._ecc_sq * (sin(lat) ** 2))
-        alt = p / cos(lat) - n
+        amsl = p / cos(lat) - n
         lat = lat / PI_OVER_180
         lon = lon / PI_OVER_180
-        return GPSCoordinate(lat=lat, lon=lon, alt=Altitude.msl(alt))
+        return GPSCoordinate(lat=lat, lon=lon, amsl=amsl)
 
 
 class FlatEarthToGPSCoordinateTransformation(object):
@@ -698,7 +633,7 @@ class FlatEarthToGPSCoordinateTransformation(object):
             x=(coord.lat - self._origin_lat) * PI_OVER_180 * self._r1,
             y=(coord.lon - self._origin_lon) * PI_OVER_180 *
             self._r2_over_cos_origin_lat_in_radians,
-            alt=coord.alt.copy() if coord.alt is not None else None
+            amsl=coord.amsl, agl=coord.agl
         )
 
     def to_gps(self, coord):
@@ -715,5 +650,5 @@ class FlatEarthToGPSCoordinateTransformation(object):
         return GPSCoordinate(
             lat=lat_in_radians / PI_OVER_180 + self._origin_lat,
             lon=lon_in_radians / PI_OVER_180 + self._origin_lon,
-            alt=coord.alt.copy() if coord.alt is not None else None
+            amsl=coord.amsl, agl=coord.agl
         )

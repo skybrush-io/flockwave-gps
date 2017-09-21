@@ -1,8 +1,8 @@
 """Unit tests for ``flockwave.gps.vectors``."""
 
 from flockwave.gps.constants import WGS84
-from flockwave.gps.vectors import AltitudeReference, Altitude, \
-    ECEFCoordinate, ECEFToGPSCoordinateTransformation, GPSCoordinate
+from flockwave.gps.vectors import ECEFCoordinate, \
+    ECEFToGPSCoordinateTransformation, GPSCoordinate
 
 import unittest
 
@@ -32,7 +32,7 @@ class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
 
         # Calculations verified with:
         # http://www.oc.nps.edu/oc2902w/coord/llhxyz.htm
-        gps_coord = GPSCoordinate(lat=49, lon=17, alt=Altitude.msl(1000))
+        gps_coord = GPSCoordinate(lat=49, lon=17, amsl=1000)
         ecef_coord = trans.to_ecef(gps_coord)
         self.assertAlmostEqual(4009873, ecef_coord.x, places=0)
         self.assertAlmostEqual(1225941, ecef_coord.y, places=0)
@@ -48,6 +48,5 @@ class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
         gps_coord = trans.to_gps(ecef_coord)
         self.assertAlmostEqual(49, gps_coord.lat, places=5)
         self.assertAlmostEqual(17, gps_coord.lon, places=5)
-        self.assertAlmostEqual(1000, gps_coord.alt.value, places=0)
-        self.assertAlmostEqual(AltitudeReference.MSL,
-                               gps_coord.alt.reference)
+        self.assertAlmostEqual(1000, gps_coord.amsl, places=0)
+        self.assertTrue(gps_coord.agl is None)
