@@ -158,7 +158,18 @@ class Vector3D(object):
             raise TypeError("expected Vector3D, got {0!r}".
                             format(type(other)))
 
-    def update(self, x=None, y=None, z=None):
+    def round(self, precision):
+        """Rounds the coordinates of the vector to the given number of
+        decimal digits.
+
+        Parameters:
+            precision (int): the number of decimal digits to round to
+        """
+        self._x = round(self._x, precision)
+        self._y = round(self._y, precision)
+        self._z = round(self._z, precision)
+
+    def update(self, x=None, y=None, z=None, precision=None):
         """Updates the coordinates of this object.
 
         Parameters:
@@ -168,6 +179,9 @@ class Vector3D(object):
                 leave the current value intact.
             z (Optional[float]): the Z coordinate; ``None`` means to
                 leave the current value intact.
+            precision (Optional[int]): the number of decimal digits to
+                round the coordinates to; ``None`` means to take the
+                values as they are
         """
         if x is not None:
             self.x = x
@@ -175,16 +189,21 @@ class Vector3D(object):
             self.y = y
         if z is not None:
             self.z = z
+        if precision is not None:
+            self.round(precision)
 
-    def update_from(self, other):
+    def update_from(self, other, precision=None):
         """Updates the coordinates of this object from another instance
         of Vector3D_.
 
         Parameters:
             other (Vector3D): the other object to copy the values from.
+            precision (Optional[int]): the number of decimal digits to
+                round the coordinates to; ``None`` means to take the
+                values as they are
         """
         # Don't use keyword arguments below; it would break VelocityNED
-        self.update(other.x, other.y, other.z)
+        self.update(other.x, other.y, other.z, precision=precision)
 
     @property
     def json(self):
@@ -386,7 +405,17 @@ class GPSCoordinate(AltitudeMixin):
     def lon(self, value):
         self._lon = float(value)
 
-    def update(self, lat=None, lon=None, alt=None):
+    def round(self, precision):
+        """Rounds the latitude and longitude of the position to the given
+        number of decimal digits. Altitude is left intact.
+
+        Parameters:
+            precision (int): the number of decimal digits to round to
+        """
+        self._lat = round(self._lat, precision)
+        self._lon = round(self._lon, precision)
+
+    def update(self, lat=None, lon=None, alt=None, precision=None):
         """Updates the coordinates of this object.
 
         Parameters:
@@ -396,6 +425,9 @@ class GPSCoordinate(AltitudeMixin):
                 leave the current value intact.
             alt (Optional[Altitude]): the new altitude; ``None`` means to
                 leave the current value intact.
+            precision (Optional[int]): the number of decimal digits to
+                round the latitude and longitude to; ``None`` means to take
+                the values as they are
         """
         if lat is not None:
             self.lat = lat
@@ -403,15 +435,21 @@ class GPSCoordinate(AltitudeMixin):
             self.lon = lon
         if alt is not None:
             self.alt = alt
+        if precision is not None:
+            self.round(precision)
 
-    def update_from(self, other):
+    def update_from(self, other, precision=None):
         """Updates the coordinates of this object from another instance
         of GPSCoordinate_.
 
         Parameters:
             other (GPSCoordinate): the other object to copy the values from.
+            precision (Optional[int]): the number of decimal digits to
+                round the latitude and longitude to; ``None`` means to take
+                the values as they are
         """
-        self.update(lat=other.lat, lon=other.lon, alt=other._alt)
+        self.update(lat=other.lat, lon=other.lon, alt=other._alt,
+                    precision=precision)
 
 
 class FlatEarthCoordinate(AltitudeMixin):
@@ -447,7 +485,17 @@ class FlatEarthCoordinate(AltitudeMixin):
             result["alt"] = self._alt.json
         return result
 
-    def update(self, x=None, y=None, alt=None):
+    def round(self, precision):
+        """Rounds the X and Y coordinates of the vector to the given
+        number of decimal digits. Altitude is left intact.
+
+        Parameters:
+            precision (int): the number of decimal digits to round to
+        """
+        self._x = round(self._x, precision)
+        self._y = round(self._y, precision)
+
+    def update(self, x=None, y=None, alt=None, precision=None):
         """Updates the coordinates of this object.
 
         Parameters:
@@ -457,6 +505,9 @@ class FlatEarthCoordinate(AltitudeMixin):
                 leave the current value intact.
             alt (Optional[Altitude]): the new altitude; ``None`` means to
                 leave the current value intact.
+            precision (Optional[int]): the number of decimal digits to
+                round the X and Y to; ``None`` means to take the
+                values as they are
         """
         if x is not None:
             self.x = x
@@ -464,16 +515,22 @@ class FlatEarthCoordinate(AltitudeMixin):
             self.y = y
         if alt is not None:
             self.alt = alt
+        if precision is not None:
+            self.round(precision)
 
-    def update_from(self, other):
+    def update_from(self, other, precision=None):
         """Updates the coordinates of this object from another instance
         of FlatEarthCoordinate_.
 
         Parameters:
             other (FlatEarthCoordinate): the other object to copy the
                 values from.
+            precision (Optional[int]): the number of decimal digits to
+                round the X and Y to; ``None`` means to take the
+                values as they are
         """
-        self.update(x=other.x, y=other.y, alt=other._alt)
+        self.update(x=other.x, y=other.y, alt=other._alt,
+                    precision=precision)
 
     @property
     def x(self):
