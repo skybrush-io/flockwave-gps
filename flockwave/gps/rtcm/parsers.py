@@ -3,10 +3,12 @@
 from __future__ import division, print_function
 
 from abc import ABCMeta, abstractmethod
+from builtins import bytes, range
 from bitstring import ConstBitStream
 from enum import Enum
 from flockwave.gps.crc import crc24q
-from six import with_metaclass
+from future.utils import with_metaclass
+
 from .packets import RTCMV2Packet, RTCMV3Packet
 
 
@@ -109,7 +111,7 @@ class RTCMV2Parser(RTCMParser):
         """Constructor."""
         self._word = 0
         super(RTCMV2Parser, self).__init__(*args, **kwds)
-        self._lsb_reversed = [self._reverse_six_lsb(i) for i in xrange(64)]
+        self._lsb_reversed = [self._reverse_six_lsb(i) for i in range(64)]
 
     def reset(self):
         """Resets the state of the parser."""
@@ -136,7 +138,7 @@ class RTCMV2Parser(RTCMParser):
                 parity ^= w & 1
                 w >>= 1
         if parity == word & 0x3F:
-            for i in xrange(3):
+            for i in range(3):
                 self._packet.append((word >> (22 - i * 8)) & 0xFF)
             return True
         else:
@@ -213,7 +215,7 @@ class RTCMV2Parser(RTCMParser):
         :return: the reversed byte
         """
         result = 0
-        for i in xrange(6):
+        for i in range(6):
             result = (result << 1) + (byte & 1)
             byte >>= 1
         return result
@@ -308,7 +310,7 @@ class RTCMV3Parser(RTCMParser):
         self.reset()
 
         buf = bytes(packet + parity)
-        next_preamble_byte = buf.find(bytes(bytearray([self.PREAMBLE])), 1)
+        next_preamble_byte = buf.find(bytes([self.PREAMBLE]), 1)
         if next_preamble_byte >= 1:
             return self.feed(buf[next_preamble_byte:])
         else:

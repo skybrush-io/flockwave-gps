@@ -2,13 +2,16 @@
 
 from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+
 import base64
 import click
 import sys
 
 from collections import namedtuple
 from flockwave.gps.http import Request
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 from .errors import InvalidResponseError
 
