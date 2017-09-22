@@ -305,9 +305,9 @@ class GPSCoordinate(AltitudeMixin):
         """Returns the JSON representation of the coordinate."""
         result = {"lat": self._lat, "lon": self._lon}
         if self.amsl is not None:
-            result["amsl"] = self._amsl.json
+            result["amsl"] = self._amsl
         if self.agl is not None:
-            result["agl"] = self._agl.json
+            result["agl"] = self._agl
         return result
 
     @property
@@ -411,9 +411,9 @@ class FlatEarthCoordinate(AltitudeMixin):
         """Returns the JSON representation of the coordinate."""
         result = {"x": self._x, "y": self._y}
         if self.amsl is not None:
-            result["amsl"] = self._amsl.json
+            result["amsl"] = self._amsl
         if self.agl is not None:
-            result["agl"] = self._agl.json
+            result["agl"] = self._agl
         return result
 
     def round(self, precision):
