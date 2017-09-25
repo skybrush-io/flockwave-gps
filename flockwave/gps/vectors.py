@@ -214,7 +214,7 @@ class VelocityNED(Vector3D):
         """
         super(VelocityNED, self).__init__(x=north, y=east, z=down)
 
-    def update(self, north=None, east=None, down=None):
+    def update(self, north=None, east=None, down=None, precision=None):
         """Updates the coordinates of this object.
 
         Parameters:
@@ -224,8 +224,11 @@ class VelocityNED(Vector3D):
                 to leave the current value intact.
             down (Optional[float]): the down coordinate; ``None`` means to
                 leave the current value intact.
+            precision (Optional[int]): the number of decimal digits to
+                round the coordinates to; ``None`` means to take the
+                values as they are
         """
-        super(VelocityNED, self).update(north, east, down)
+        super(VelocityNED, self).update(north, east, down, precision=precision)
 
     @Vector3D.json.getter
     def json(self):
