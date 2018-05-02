@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 requires = [
     "bitstring>=3.1.3",
     "click>=6.2",
-    "enum34>=1.1.2",
+    "enum-compat>=0.0.2",
     "future>=0.16.0"
 ]
 
