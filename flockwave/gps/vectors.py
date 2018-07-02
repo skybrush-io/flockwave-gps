@@ -46,6 +46,15 @@ class AltitudeMixin(object):
 class Vector3D(object):
     """Generic 3D vector."""
 
+    @classmethod
+    def from_json(cls, data):
+        """Creates a generic 3D vector from its JSON representation."""
+        return cls(
+            x=float(data.get("x", 0.0)),
+            y=float(data.get("y", 0.0)),
+            z=float(data.get("z", 0.0))
+        )
+
     def __init__(self, x=0.0, y=0.0, z=0.0):
         """Constructor.
 
@@ -204,6 +213,15 @@ class VelocityNED(Vector3D):
     specification.
     """
 
+    @classmethod
+    def from_json(cls, data):
+        """Creates a NED velocity vector from its JSON representation."""
+        return cls(
+            north=float(data.get("north", 0.0)),
+            east=float(data.get("east", 0.0)),
+            down=float(data.get("down", 0.0))
+        )
+
     def __init__(self, north=0.0, east=0.0, down=0.0, **kwds):
         """Constructor.
 
@@ -279,6 +297,16 @@ class GPSCoordinate(AltitudeMixin):
     """Class representing a GPS coordinate given with latitude, longitude
     and relative or MSL altitude.
     """
+
+    @classmethod
+    def from_json(cls, data):
+        """Creates a GPS coordinate from its JSON representation."""
+        return cls(
+            lat=float(data.get("lat", 0.0)),
+            lon=float(data.get("lon", 0.0)),
+            amsl=float(data["amsl"]) if "amsl" in data else None,
+            agl=float(data["agl"]) if "agl" in data else None
+        )
 
     def __init__(self, lat=0.0, lon=0.0, amsl=None, agl=None):
         """Constructor.
@@ -385,6 +413,16 @@ class GPSCoordinate(AltitudeMixin):
 
 class FlatEarthCoordinate(AltitudeMixin):
     """Class representing a coordinate given in flat Earth coordinates."""
+
+    @classmethod
+    def from_json(cls, data):
+        """Creates a flat Earth coordinate from its JSON representation."""
+        return cls(
+            x=float(data.get("x", 0.0)),
+            y=float(data.get("y", 0.0)),
+            amsl=float(data["amsl"]) if "amsl" in data else None,
+            agl=float(data["agl"]) if "agl" in data else None
+        )
 
     def __init__(self, x=0.0, y=0.0, amsl=None, agl=None):
         """Constructor.

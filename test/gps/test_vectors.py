@@ -2,9 +2,52 @@
 
 from flockwave.gps.constants import WGS84
 from flockwave.gps.vectors import ECEFCoordinate, \
-    ECEFToGPSCoordinateTransformation, GPSCoordinate
+    ECEFToGPSCoordinateTransformation, GPSCoordinate, \
+    Vector3D, VelocityNED
 
 import unittest
+
+
+class JSONFormatTest(unittest.TestCase):
+    """Unit tests for JSON conversion."""
+
+    def test_vector3d_to_json_and_back(self):
+        """Tests whether Vector3D instances can be converted into JSON and
+        back.
+        """
+        vec = Vector3D(x=1, y=4, z=9)
+        vec = Vector3D.from_json(vec.json)
+        self.assertEqual(1, vec.x)
+        self.assertEqual(4, vec.y)
+        self.assertEqual(9, vec.z)
+
+    def test_velocity_ned_to_json_and_back(self):
+        """Tests whether VelocityNED instances can be converted into JSON and
+        back.
+        """
+        vec = VelocityNED(north=1, east=4, down=9)
+        vec = VelocityNED.from_json(vec.json)
+        self.assertEqual(1, vec.north)
+        self.assertEqual(4, vec.east)
+        self.assertEqual(9, vec.down)
+
+    def test_gps_coordinate_to_json_and_back(self):
+        """Tests whether GPSCoordinate instances can be converted into JSON and
+        back.
+        """
+        vec = GPSCoordinate(lat=1, lon=4, amsl=9)
+        vec = GPSCoordinate.from_json(vec.json)
+        self.assertEqual(1, vec.lat)
+        self.assertEqual(4, vec.lon)
+        self.assertEqual(9, vec.amsl)
+        self.assertEqual(None, vec.agl)
+
+        vec = GPSCoordinate(lat=1, lon=4, agl=9)
+        vec = GPSCoordinate.from_json(vec.json)
+        self.assertEqual(1, vec.lat)
+        self.assertEqual(4, vec.lon)
+        self.assertEqual(None, vec.amsl)
+        self.assertEqual(9, vec.agl)
 
 
 class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
