@@ -2,10 +2,7 @@
 
 from __future__ import division
 
-from math import pi
-
-__all__ = ("WGS84", "GPS_PI", "PI_OVER_180",
-           "SPEED_OF_LIGHT_M_S", "SPEED_OF_LIGHT_KM_S")
+__all__ = ("WGS84", "GPS_PI", "SPEED_OF_LIGHT_M_S", "SPEED_OF_LIGHT_KM_S")
 
 
 class WGS84(object):
@@ -45,9 +42,6 @@ class WGS84(object):
     MEAN_RADIUS_IN_METERS = (2 * EQUATORIAL_RADIUS_IN_METERS +
                              POLAR_RADIUS_IN_METERS) / 3
 
-
-#: pi over 180; multiplicative constant to turn degrees into radians
-PI_OVER_180 = pi / 180
 
 #: Value of pi used in some GPS-specific calculations.
 GPS_PI = 3.1415926535898

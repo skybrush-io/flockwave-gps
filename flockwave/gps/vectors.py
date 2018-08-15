@@ -2,8 +2,8 @@
 
 from __future__ import absolute_import, division
 
-from .constants import PI_OVER_180, WGS84
-from math import atan2, cos, pi, sin, sqrt
+from .constants import WGS84
+from math import atan2, cos, degrees, radians, sin, sqrt
 
 
 __all__ = ("GPSCoordinate", "FlatEarthCoordinate",
@@ -582,7 +582,7 @@ class ECEFToGPSCoordinateTransformation(object):
             raise ValueError("GPS coordinates need an altitude relative "
                              "to the mean sea level")
 
-        lat, lon = coord.lat * PI_OVER_180, coord.lon * PI_OVER_180
+        lat, lon = radians(coord.lat), radians(coord.lon)
         height = coord.amsl
 
         n = self._eq_radius / sqrt(1 - self._ecc_sq * (sin(lat) ** 2))
@@ -609,8 +609,7 @@ class ECEFToGPSCoordinateTransformation(object):
                     p - self._ecc_sq_times_eq_radius * (cos(th) ** 3))
         n = self._eq_radius / sqrt(1 - self._ecc_sq * (sin(lat) ** 2))
         amsl = p / cos(lat) - n
-        lat = lat / PI_OVER_180
-        lon = lon / PI_OVER_180
+        lat, lon = degrees(lat), degrees(lon)
         return GPSCoordinate(lat=lat, lon=lon, amsl=amsl)
 
 
@@ -649,12 +648,10 @@ class FlatEarthToGPSCoordinateTransformation(object):
         """Recalculates some cached values that are re-used across different
         transformations.
         """
-        self._pi_over_180 = pi / 180
-
         earth_radius = WGS84.EQUATORIAL_RADIUS_IN_METERS
         eccentricity_sq = WGS84.ECCENTRICITY_SQUARED
 
-        origin_lat_in_radians = self._origin_lat * self._pi_over_180
+        origin_lat_in_radians = radians(self._origin_lat)
 
         x = (1 - eccentricity_sq * (sin(origin_lat_in_radians) ** 2))
         self._r1 = earth_radius * (1 - eccentricity_sq) / (x ** 1.5)
@@ -671,8 +668,8 @@ class FlatEarthToGPSCoordinateTransformation(object):
             FlatEarthCoordinate: the converted coordinate
         """
         return FlatEarthCoordinate(
-            x=(coord.lat - self._origin_lat) * PI_OVER_180 * self._r1,
-            y=(coord.lon - self._origin_lon) * PI_OVER_180 *
+            x=radians(coord.lat - self._origin_lat) * self._r1,
+            y=radians(coord.lon - self._origin_lon) *
             self._r2_over_cos_origin_lat_in_radians,
             amsl=coord.amsl, agl=coord.agl
         )
@@ -686,10 +683,9 @@ class FlatEarthToGPSCoordinateTransformation(object):
         Returns:
             GPSCoordinate: the converted coordinate
         """
-        lat_in_radians = coord.x / self._r1
-        lon_in_radians = coord.y / self._r2_over_cos_origin_lat_in_radians
+        lat = degrees(coord.x / self._r1)
+        lon = degrees(coord.y / self._r2_over_cos_origin_lat_in_radians)
         return GPSCoordinate(
-            lat=lat_in_radians / PI_OVER_180 + self._origin_lat,
-            lon=lon_in_radians / PI_OVER_180 + self._origin_lon,
+            lat=lat + self._origin_lat, lon=lon + self._origin_lon,
             amsl=coord.amsl, agl=coord.agl
         )
