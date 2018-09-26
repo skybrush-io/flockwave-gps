@@ -1,9 +1,11 @@
 """Unit tests for ``flockwave.gps.vectors``."""
 
 from flockwave.gps.constants import WGS84
-from flockwave.gps.vectors import ECEFCoordinate, \
-    ECEFToGPSCoordinateTransformation, GPSCoordinate, \
-    Vector3D, VelocityNED
+from flockwave.gps.vectors import (
+    ECEFCoordinate, ECEFToGPSCoordinateTransformation,
+    FlatEarthCoordinate, FlatEarthToGPSCoordinateTransformation,
+    GPSCoordinate, Vector3D, VelocityNED
+)
 
 import unittest
 
@@ -51,7 +53,7 @@ class JSONFormatTest(unittest.TestCase):
 
 
 class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
-    """Unit tests for the ECEFToGPSCoordinateTransformationTest_ class."""
+    """Unit tests for the ECEFToGPSCoordinateTransformation_ class."""
 
     def test_ellipsoid_parameters(self):
         """Tests whether the ellipsoid parameters are taken from WGS84
@@ -70,7 +72,7 @@ class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
         self.assertEqual((2.0, 2.0), trans.radii)
 
     def test_to_ecef(self):
-        """Unit tests for the ``to_ecef()`` method."""
+        """Tests whether the ``to_ecef()`` method works."""
         trans = ECEFToGPSCoordinateTransformation()
 
         # Calculations verified with:
@@ -82,7 +84,7 @@ class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
         self.assertAlmostEqual(4791313, ecef_coord.z, places=0)
 
     def test_to_gps(self):
-        """Unit tests for the ``to_gps()`` method."""
+        """Tests whether the ``to_gps()`` method works."""
         trans = ECEFToGPSCoordinateTransformation()
 
         # Calculations verified with:
@@ -93,3 +95,213 @@ class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
         self.assertAlmostEqual(17, gps_coord.lon, places=5)
         self.assertAlmostEqual(1000, gps_coord.amsl, places=0)
         self.assertTrue(gps_coord.agl is None)
+
+
+class FlatEarthToGPSCoordinateTransformationTest(unittest.TestCase):
+    """Unit tests for the FlatEarthToGPSCoordinateTransformation_ class."""
+
+    def test_defaults(self):
+        """Tests whether the default settings of the transformation are
+        correct.
+        """
+        origin = GPSCoordinate(lat=49, lon=17)
+        trans = FlatEarthToGPSCoordinateTransformation(origin=origin)
+
+        self.assertEqual("nwu", trans.type)
+        self.assertEqual(0, trans.orientation)
+        self.assertEqual(49, trans.origin.lat)
+        self.assertEqual(17, trans.origin.lon)
+
+    def test_conversion_in_nwu(self):
+        """Tests whether the transformation from flat Earth to GPS coordinates
+        and vice versa work with an NWU coordinate system.
+        """
+        origin = GPSCoordinate(lat=49, lon=17)
+
+        # X axis points North, Y axis points West
+        trans = FlatEarthToGPSCoordinateTransformation(
+            origin=origin, type="nwu", orientation=0
+        )
+
+        flat_earth_coord = FlatEarthCoordinate(x=0, y=0)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=5000, y=0)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49.04496, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=0, y=-5000)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17.06833, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=-3000, y=4000)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(48.97302, gps_coord.lat, places=5)
+        self.assertAlmostEqual(16.94533, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        # Try a different axis orientation: X axis points Northeast, Y axis
+        # points Northwest
+        trans = FlatEarthToGPSCoordinateTransformation(
+            origin=origin, type="nwu", orientation=45
+        )
+
+        flat_earth_coord = FlatEarthCoordinate(x=0, y=0)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=5000, y=0)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49.03179, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17.04832, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=0, y=-5000)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(48.96821, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17.04832, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=-3000, y=3000)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49, gps_coord.lat, places=5)
+        self.assertAlmostEqual(16.94202, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+    def test_conversion_in_neu(self):
+        """Tests whether the transformation from flat Earth to GPS coordinates
+        and vice versa work with an NEU coordinate system.
+        """
+        origin = GPSCoordinate(lat=49, lon=17)
+
+        # X axis points North, Y axis points West
+        trans = FlatEarthToGPSCoordinateTransformation(
+            origin=origin, type="neu", orientation=0
+        )
+
+        flat_earth_coord = FlatEarthCoordinate(x=0, y=0)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=5000, y=0)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49.04496, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=0, y=5000)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17.06833, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=-3000, y=-4000)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(48.97302, gps_coord.lat, places=5)
+        self.assertAlmostEqual(16.94533, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        # Try a different axis orientation: X axis points Northeast, Y axis
+        # points Northwest
+        trans = FlatEarthToGPSCoordinateTransformation(
+            origin=origin, type="neu", orientation=45
+        )
+
+        flat_earth_coord = FlatEarthCoordinate(x=0, y=0)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=5000, y=0)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49.03179, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17.04832, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=0, y=5000)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(48.96821, gps_coord.lat, places=5)
+        self.assertAlmostEqual(17.04832, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)
+
+        flat_earth_coord = FlatEarthCoordinate(x=-3000, y=-3000)
+        gps_coord = trans.to_gps(flat_earth_coord)
+        recovered_flat_earth_coord = trans.to_flat_earth(gps_coord)
+        self.assertAlmostEqual(49, gps_coord.lat, places=5)
+        self.assertAlmostEqual(16.94202, gps_coord.lon, places=5)
+        self.assertAlmostEqual(flat_earth_coord.x,
+                               recovered_flat_earth_coord.x, places=5)
+        self.assertAlmostEqual(flat_earth_coord.y,
+                               recovered_flat_earth_coord.y, places=5)

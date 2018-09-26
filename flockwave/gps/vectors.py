@@ -618,17 +618,58 @@ class FlatEarthToGPSCoordinateTransformation(object):
     coordinates and vice versa.
     """
 
-    def __init__(self, origin=None):
+    @staticmethod
+    def _normalize_type(type):
+        """Returns the normalized name of the given coordinate system type.
+
+        Raises:
+            ValueError: if type is not a known coordinate system name
+        """
+        normalized = None
+        if len(type) == 3:
+            type = type.lower()
+            if type in ("neu", "nwu", "ned", "nwd"):
+                normalized = type
+
+        if not normalized:
+            raise ValueError("unknown coordinate system type: {0!r}"
+                             .format(type))
+
+        return normalized
+
+    def __init__(self, origin=None, orientation=0, type="nwu"):
         """Constructor.
 
         Parameters:
             origin (GPSCoordinate): origin of the flat Earth coordinate
                 system, in GPS coordinates. Altitude component is ignored.
                 The coordinate will be copied.
+            orientation (float): orientation of the X axis of the coordinate
+                system, in degrees, relative to North (zero degrees),
+                increasing in CW direction.
+            type (str): orientation of the coordinate system; can be `"neu"`
+                (North-East-Up), `"nwu"` (North-West-Up), `"ned"`
+                (North-East-Down) or `"nwd"` (North-West-Down)
         """
         self._origin_lat = None
         self._origin_lon = None
+        self._orientation = float(orientation)
+        self._type = self._normalize_type(type)
+
         self.origin = origin if origin is not None else GPSCoordinate()
+
+    @property
+    def orientation(self):
+        """The orientation of the X axis of the coordinate system, in degrees,
+        relative to North (zero degrees), increasing in clockwise direction.
+        """
+        return self._orientation
+
+    @orientation.setter
+    def orientation(self, value):
+        if self._orientation != value:
+            self._orientation = value
+            self._recalculate()
 
     @property
     def origin(self):
@@ -644,6 +685,17 @@ class FlatEarthToGPSCoordinateTransformation(object):
         self._origin_lon = float(value.lon)
         self._recalculate()
 
+    @property
+    def type(self):
+        """The type of the coordinate system."""
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        if self._type != value:
+            self._type = value
+            self._recalculate()
+
     def _recalculate(self):
         """Recalculates some cached values that are re-used across different
         transformations.
@@ -658,6 +710,13 @@ class FlatEarthToGPSCoordinateTransformation(object):
         self._r2_over_cos_origin_lat_in_radians = \
             earth_radius / sqrt(x) * cos(origin_lat_in_radians)
 
+        self._sin_alpha = sin(radians(self._orientation))
+        self._cos_alpha = cos(radians(self._orientation))
+
+        self._xmul = 1
+        self._ymul = 1 if self._type[1] == "e" else -1
+        self._zmul = 1 if self._type[2] == "u" else -1
+
     def to_flat_earth(self, coord):
         """Converts the given GPS coordinates to flat Earth coordinates.
 
@@ -667,11 +726,20 @@ class FlatEarthToGPSCoordinateTransformation(object):
         Returns:
             FlatEarthCoordinate: the converted coordinate
         """
+        x, y = (
+            radians(coord.lat - self._origin_lat) * self._r1,
+            radians(coord.lon - self._origin_lon) *
+            self._r2_over_cos_origin_lat_in_radians
+        )
+        x, y = (
+            x * self._cos_alpha + y * self._sin_alpha,
+            -x * self._sin_alpha + y * self._cos_alpha,
+        )
         return FlatEarthCoordinate(
-            x=radians(coord.lat - self._origin_lat) * self._r1,
-            y=radians(coord.lon - self._origin_lon) *
-            self._r2_over_cos_origin_lat_in_radians,
-            amsl=coord.amsl, agl=coord.agl
+            x=x * self._xmul,
+            y=y * self._ymul,
+            amsl=coord.amsl * self._zmul if coord.amsl is not None else None,
+            agl=coord.agl * self._zmul if coord.agl is not None else None
         )
 
     def to_gps(self, coord):
@@ -683,9 +751,21 @@ class FlatEarthToGPSCoordinateTransformation(object):
         Returns:
             GPSCoordinate: the converted coordinate
         """
-        lat = degrees(coord.x / self._r1)
-        lon = degrees(coord.y / self._r2_over_cos_origin_lat_in_radians)
+        x, y = (
+            coord.x * self._xmul,
+            coord.y * self._ymul
+        )
+
+        x, y = (
+            x * self._cos_alpha - y * self._sin_alpha,
+            x * self._sin_alpha + y * self._cos_alpha,
+        )
+
+        lat = degrees(x / self._r1)
+        lon = degrees(y / self._r2_over_cos_origin_lat_in_radians)
+
         return GPSCoordinate(
             lat=lat + self._origin_lat, lon=lon + self._origin_lon,
-            amsl=coord.amsl, agl=coord.agl
+            amsl=coord.amsl * self._zmul if coord.amsl is not None else None,
+            agl=coord.agl * self._zmul if coord.agl is not None else None
         )
