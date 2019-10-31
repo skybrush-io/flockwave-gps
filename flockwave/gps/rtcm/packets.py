@@ -1,7 +1,5 @@
 """RTCM V2 and V3 packet types that we support in this library."""
 
-from __future__ import division
-
 from bitstring import pack
 from builtins import chr, range
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
@@ -33,7 +31,7 @@ class RTCMV2Packet(object):
         """
         _packet_classes = {
             1: RTCMV2FullCorrectionsPacket,
-            3: RTCMV2GPSReferenceStationParametersPacket
+            3: RTCMV2GPSReferenceStationParametersPacket,
         }
 
         packet_type = bitstream.read(6).uint
@@ -62,8 +60,10 @@ class RTCMV2Packet(object):
         self.modified_z_count = None
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "\
+        return (
+            "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "
             "station_id={0.station_id!r})>".format(self)
+        )
 
     def write_body(self, bits):
         """Writes the *body* of this packet (without the header, the
@@ -90,8 +90,10 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
 
         num_bits = len(bitstream) - bitstream.pos
         if num_bits % 40 != 0:
-            raise ValueError("full corrections packet must contain a "
-                             "payload whose length is divisible by 40")
+            raise ValueError(
+                "full corrections packet must contain a "
+                "payload whose length is divisible by 40"
+            )
 
         num_corrections = num_bits // 40
         corrections = []
@@ -105,8 +107,7 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
             multiplier = 16 ** scale_factor
             prc = scaled_prc * multiplier
             prrc = scaled_prrc * multiplier
-            correction = CorrectionData(svid=svid, prc=prc, prrc=prrc,
-                                        iode=iode)
+            correction = CorrectionData(svid=svid, prc=prc, prrc=prrc, iode=iode)
             corrections.append(correction)
         return cls(station_id=station_id, corrections=corrections)
 
@@ -119,12 +120,15 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
                 all the satellites
         """
         super(RTCMV2FullCorrectionsPacket, self).__init__(
-            packet_type=1, station_id=station_id)
+            packet_type=1, station_id=station_id
+        )
         self.corrections = corrections
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(station_id={0.station_id!r}, "\
+        return (
+            "<{0.__class__.__name__}(station_id={0.station_id!r}, "
             "corrections={0.corrections!r})>".format(self)
+        )
 
     def write_body(self, bits):
         """Writes the bits of a full corrections message (RTCM message type
@@ -138,12 +142,17 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
             if correction.svid <= 0:
                 raise ValueError("correction data SVID must be positive")
             if correction.svid > 32:
-                raise ValueError("correction data SVID must not be "
-                                 "larger than 32")
-            bits += pack("uint:1, uint:2, uint:5, intbe:16, int:8, uint:8",
-                         correction.scale_factor, 0,
-                         correction.svid & 0x1f, correction.scaled_prc,
-                         correction.scaled_prrc, correction.iode)
+                raise ValueError("correction data SVID must not be " "larger than 32")
+            bits += pack(
+                "uint:1, uint:2, uint:5, intbe:16, int:8, uint:8",
+                correction.scale_factor,
+                0,
+                correction.svid & 0x1F,
+                correction.scaled_prc,
+                correction.scaled_prrc,
+                correction.iode,
+            )
+
 
 # TODO: maybe implement RTCM v2 partial corrections packet as well?
 # (packet type = 9)
@@ -162,11 +171,14 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
         """
         assert packet_type == 3
 
-        pos = ECEFCoordinate(
-            x=bitstream.read(32).uintbe,
-            y=bitstream.read(32).uintbe,
-            z=bitstream.read(32).uintbe
-        ) / 100
+        pos = (
+            ECEFCoordinate(
+                x=bitstream.read(32).uintbe,
+                y=bitstream.read(32).uintbe,
+                z=bitstream.read(32).uintbe,
+            )
+            / 100
+        )
         return cls(station_id=station_id, position=pos)
 
     def __init__(self, station_id=None, position=None):
@@ -177,12 +189,15 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
             position (ECEFCoordinate): the position of the reference station
         """
         super(RTCMV2GPSReferenceStationParametersPacket, self).__init__(
-            packet_type=3, station_id=station_id)
+            packet_type=3, station_id=station_id
+        )
         self.position = position
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(station_id={0.station_id!r}, "\
+        return (
+            "<{0.__class__.__name__}(station_id={0.station_id!r}, "
             "position={0.position!r})>".format(self)
+        )
 
     def write_body(self, bits):
         """Writes the body of this packet to the end of the given bitstream.
@@ -212,7 +227,7 @@ class RTCMV3Packet(object):
             1006: RTCMV3StationaryAntennaPacket,
             1008: RTCMV3AntennaDescriptorPacket,
             1019: RTCMV3GPSEphemerisPacket,
-            1033: RTCMV3ExtendedAntennaDescriptorPacket
+            1033: RTCMV3ExtendedAntennaDescriptorPacket,
         }
 
         packet_type = bitstream.read(12).uint
@@ -233,8 +248,7 @@ class RTCMV3Packet(object):
         self.packet_type = packet_type
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(packet_type={0.packet_type!r})>"\
-            .format(self)
+        return "<{0.__class__.__name__}(packet_type={0.packet_type!r})>".format(self)
 
 
 class RTCMV3SatelliteInfo(object):
@@ -252,15 +266,16 @@ class RTCMV3SatelliteInfo(object):
         # Store the raw parameters of the L1 signal first
         result.l1 = {}
         result.l1["code"] = bitstream.read(1).uint
-        result.l1["pseudorange"] = cls._transform_pseudorange(
-            bitstream.read(24).uint)
-        result.l1["pseudorange_diff"], result.l1["pseudorange_valid"] = \
-            cls._transform_pseudorange_diff(bitstream.read(20).int)
+        result.l1["pseudorange"] = cls._transform_pseudorange(bitstream.read(24).uint)
+        result.l1["pseudorange_diff"], result.l1[
+            "pseudorange_valid"
+        ] = cls._transform_pseudorange_diff(bitstream.read(20).int)
         result.l1["lock_time"] = bitstream.read(7).uint
         if is_extended:
             result.l1["ambiguity"] = bitstream.read(8).uint
-            result.l1["cnr"] = bitstream.read(8).uint * \
-                RTCMParams.CARRIER_NOISE_RATIO_UNITS
+            result.l1["cnr"] = (
+                bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
+            )
 
         # Now the L2 signal
         if has_l2:
@@ -276,13 +291,16 @@ class RTCMV3SatelliteInfo(object):
             # as we add this to the other pseudorange in the end.
             # Check and verify.
             result.l2["pseudorange"] = cls._transform_pseudorange(
-                bitstream.read(14).int)
-            result.l2["pseudorange_diff"], result.l2["pseudorange_valid"] = \
-                cls._transform_pseudorange_diff(bitstream.read(20).int)
+                bitstream.read(14).int
+            )
+            result.l2["pseudorange_diff"], result.l2[
+                "pseudorange_valid"
+            ] = cls._transform_pseudorange_diff(bitstream.read(20).int)
             result.l2["lock_time"] = bitstream.read(7).uint
             if is_extended:
-                result.l2["cnr"] = bitstream.read(8).uint * \
-                    RTCMParams.CARRIER_NOISE_RATIO_UNITS
+                result.l2["cnr"] = (
+                    bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
+                )
 
         # Postprocessing
         result.l1["type"] = "1W" if result.l1["code"] else "1C"
@@ -295,13 +313,16 @@ class RTCMV3SatelliteInfo(object):
 
         # Calculate temp_corrs from pyUblox -- I don't know what it means yet
         result.temp_corrs = {}
-        if result.l1["pseudorange_valid"] and \
-                (result.l2["pseudorange_valid"] or not has_l2):
-            result.temp_corrs["p1"] = result.l1["pseudorange"] + \
-                result.l1["ambiguity"] * SPEED_OF_LIGHT_KM_S
+        if result.l1["pseudorange_valid"] and (
+            result.l2["pseudorange_valid"] or not has_l2
+        ):
+            result.temp_corrs["p1"] = (
+                result.l1["pseudorange"] + result.l1["ambiguity"] * SPEED_OF_LIGHT_KM_S
+            )
             if has_l2:
-                result.temp_corrs["p2"] = result.temp_corrs["p1"] + \
-                    result.l2["pseudorange"]
+                result.temp_corrs["p2"] = (
+                    result.temp_corrs["p1"] + result.l2["pseudorange"]
+                )
         else:
             result.temp_corrs["p1"] = 0.0
             if has_l2:
@@ -342,9 +363,10 @@ class RTCMV3SatelliteInfo(object):
             return value * RTCMParams.PSEUDORANGE_DIFF_RESOLUTION, True
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(svid={0.svid!r}, "\
-            "l1={0.l1!r}, l2={0.l2!r}), temp_corrs={0.temp_corrs!r}>".\
-            format(self)
+        return (
+            "<{0.__class__.__name__}(svid={0.svid!r}, "
+            "l1={0.l1!r}, l2={0.l2!r}), temp_corrs={0.temp_corrs!r}>".format(self)
+        )
 
 
 class RTCMV3GPSRTKPacket(RTCMV3Packet):
@@ -392,8 +414,7 @@ class RTCMV3GPSRTKPacket(RTCMV3Packet):
         """Returns the given number of satellites from the satellite info
         structure with the best signal-to-noise ratios.
         """
-        sorted_satellites = sorted(self.satellites, key=attrgetter("snr"),
-                                   reverse=True)
+        sorted_satellites = sorted(self.satellites, key=attrgetter("snr"), reverse=True)
         if count is not None:
             sorted_satellites[count:] = []
         return sorted_satellites
@@ -409,12 +430,14 @@ class RTCMV3GPSRTKPacket(RTCMV3Packet):
         return self.tow
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(station_id={0.station_id!r}, "\
-            "tow={0.tow!r}, sync={0.sync!r}, "\
-            "smoothed={0.smoothed!r}, "\
-            "smoothing_interval={0.smoothing_interval!r}, "\
-            "satellites={0.satellites!r}"\
+        return (
+            "<{0.__class__.__name__}(station_id={0.station_id!r}, "
+            "tow={0.tow!r}, sync={0.sync!r}, "
+            "smoothed={0.smoothed!r}, "
+            "smoothing_interval={0.smoothing_interval!r}, "
+            "satellites={0.satellites!r}"
             ")>".format(self)
+        )
 
 
 class RTCMV3StationaryAntennaPacket(RTCMV3Packet):
@@ -439,7 +462,7 @@ class RTCMV3StationaryAntennaPacket(RTCMV3Packet):
         result = cls(packet_type)
         result.station_id = bitstream.read(12).uint
 
-        bitstream.read(6)         # reserved
+        bitstream.read(6)  # reserved
         result.system = bitstream.read(3).uint
         result.is_reference_station = bitstream.read(1).bool
         ref_x = bitstream.read(38).int
@@ -454,23 +477,28 @@ class RTCMV3StationaryAntennaPacket(RTCMV3Packet):
             result.antenna_height = None
         elif packet_type == 1006:
             # This packet has height information
-            result.antenna_height = bitstream.read(16).uint * \
-                RTCMParams.ANTENNA_POSITION_RESOLUTION
+            result.antenna_height = (
+                bitstream.read(16).uint * RTCMParams.ANTENNA_POSITION_RESOLUTION
+            )
         else:
             raise ValueError("Invalid packet type: {0}".format(packet_type))
 
-        result.position = ECEFCoordinate(x=ref_x, y=ref_y, z=ref_z) * \
-            RTCMParams.ANTENNA_POSITION_RESOLUTION
+        result.position = (
+            ECEFCoordinate(x=ref_x, y=ref_y, z=ref_z)
+            * RTCMParams.ANTENNA_POSITION_RESOLUTION
+        )
         return result
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "\
-            "position={0.position!r}, "\
-            "antenna_height={0.antenna_height!r}, "\
-            "system={0.system!r}, "\
-            "is_reference_station={0.is_reference_station!r}, "\
-            "single_receiver={0.single_receiver!r}"\
+        return (
+            "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "
+            "position={0.position!r}, "
+            "antenna_height={0.antenna_height!r}, "
+            "system={0.system!r}, "
+            "is_reference_station={0.is_reference_station!r}, "
+            "single_receiver={0.single_receiver!r}"
             ")>".format(self)
+        )
 
 
 class RTCMV3AntennaDescriptorPacket(RTCMV3Packet):
@@ -509,12 +537,14 @@ class RTCMV3AntennaDescriptorPacket(RTCMV3Packet):
         return "".join(chr(bitstream.read(8).uint) for _ in range(n))
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "\
-            "station_id={0.station_id!r}, "\
-            "descriptor={0.descriptor!r}, "\
-            "setup_id={0.setup_id!r}, "\
-            "serial={0.serial!r}"\
+        return (
+            "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "
+            "station_id={0.station_id!r}, "
+            "descriptor={0.descriptor!r}, "
+            "setup_id={0.setup_id!r}, "
+            "serial={0.serial!r}"
             ")>".format(self)
+        )
 
 
 class RTCMV3GPSEphemerisPacket(RTCMV3Packet):
@@ -548,29 +578,29 @@ class RTCMV3GPSEphemerisPacket(RTCMV3Packet):
         result.week = bitstream.read(10).uint
         result.acc = bitstream.read(4).uint
         result.l2code = bitstream.read(2).uint
-        result.i_dot = bitstream.read(14).int         # 3
-        result.iode = bitstream.read(8).uint          # 3
-        result.toc = bitstream.read(16).uint          # 3
-        result.af2 = bitstream.read(8).int            # 3
-        result.af1 = bitstream.read(16).int           # 3
-        result.af0 = bitstream.read(22).int           # 3
+        result.i_dot = bitstream.read(14).int  # 3
+        result.iode = bitstream.read(8).uint  # 3
+        result.toc = bitstream.read(16).uint  # 3
+        result.af2 = bitstream.read(8).int  # 3
+        result.af1 = bitstream.read(16).int  # 3
+        result.af0 = bitstream.read(22).int  # 3
         result.iodc = bitstream.read(10).uint
-        result.crs = bitstream.read(16).int           #
-        result.delta_n = bitstream.read(16).int       # 2
-        result.m0 = bitstream.read(32).int            # 2
-        result.cuc = bitstream.read(16).int           #
+        result.crs = bitstream.read(16).int  #
+        result.delta_n = bitstream.read(16).int  # 2
+        result.m0 = bitstream.read(32).int  # 2
+        result.cuc = bitstream.read(16).int  #
         result.eccentricity = bitstream.read(32).uint  # 2
-        result.cus = bitstream.read(16).int           #
-        result.sqrt_a = bitstream.read(32).uint       # 2
-        result.toe = bitstream.read(16).uint          # 3
-        result.cic = bitstream.read(16).int           #
-        result.omega0 = bitstream.read(32).int        # 2
-        result.cis = bitstream.read(16).int           #
-        result.i0 = bitstream.read(32).int            # 2
-        result.crc = bitstream.read(16).int           #
-        result.omega = bitstream.read(32).int         # 2
-        result.omega_dot = bitstream.read(24).int     # 2
-        result.tgd = bitstream.read(8).int            # 3
+        result.cus = bitstream.read(16).int  #
+        result.sqrt_a = bitstream.read(32).uint  # 2
+        result.toe = bitstream.read(16).uint  # 3
+        result.cic = bitstream.read(16).int  #
+        result.omega0 = bitstream.read(32).int  # 2
+        result.cis = bitstream.read(16).int  #
+        result.i0 = bitstream.read(32).int  # 2
+        result.crc = bitstream.read(16).int  #
+        result.omega = bitstream.read(32).int  # 2
+        result.omega_dot = bitstream.read(24).int  # 2
+        result.tgd = bitstream.read(8).int  # 3
         result.health = bitstream.read(6).uint
         result.l2p = bitstream.read(1).uint
         result.fit = bitstream.read(1).uint
@@ -589,58 +619,46 @@ class RTCMV3GPSEphemerisPacket(RTCMV3Packet):
             "cis": self.cis / (2 ** 29),
             "crc": self.crc / (2 ** 5),
             "crs": self.crs / (2 ** 5),
-
             # Group delay differential between L1 and L2 [s]
             "tgd": self.tgd / (2 ** 31),
-
             # Polynomial clock correction coefficient [s]
             "af0": self.af0 / (2 ** 31),
-
             # Polynomial clock correction coefficient [s/s]
             "af1": self.af1 / (2 ** 43),
-
             # Polynomial clock correction coefficient [s/s^2]
             "af2": self.af2 / (2 ** 55),
-
             # Time of week [s]
             "toe": self.toe * (2 ** 4),
-
             # Clock reference time of week [s]
             "toc": self.toc * (2 ** 4),
-
             # Mean motion difference from computed value [rad]
             "delta_n": self.delta_n * GPS_PI / (2 ** 43),
-
             # Mean anomaly at reference time [rad]
             "m0": self.m0 * GPS_PI / (2 ** 31),
-
             # Eccentricity of satellite orbit
             "eccentricity": self.eccentricity / (2 ** 33),
-
             # Square root of the semi-major axis of the orbit
             "sqrt_a": self.sqrt_a / (2 ** 19),
-
             "omega0": self.omega0 * GPS_PI / (2 ** 31),
             "i0": self.i0 * GPS_PI / (2 ** 31),
             "omega": self.omega * GPS_PI / (2 ** 31),
             "omega_dot": self.omega_dot * GPS_PI / (2 ** 43),
             "i_dot": self.i_dot * GPS_PI / (2 ** 43),
-
             "iodc": self.iodc,
             "iode": self.iode,
-
             "week": self.week,
             "tow": None,
             "flags": None,
-
-            "svid": self.svid
+            "svid": self.svid,
         }
 
         return EphemerisData(**params)
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(svid={0.svid!r}), "\
+        return (
+            "<{0.__class__.__name__}(svid={0.svid!r}), "
             "ephemeris={0.ephemeris!r}>".format(self)
+        )
 
 
 class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
@@ -682,11 +700,13 @@ class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
         return "".join(chr(bitstream.read(8).uint) for _ in range(n))
 
     def __repr__(self):
-        return "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "\
-            "station_id={0.station_id!r}, "\
-            "descriptor={0.descriptor!r}, "\
-            "setup_id={0.setup_id!r}, "\
-            "serial={0.serial!r}, "\
-            "receiver={0.receiver!r}, "\
-            "firmware={0.firmware!r}"\
+        return (
+            "<{0.__class__.__name__}(packet_type={0.packet_type!r}, "
+            "station_id={0.station_id!r}, "
+            "descriptor={0.descriptor!r}, "
+            "setup_id={0.setup_id!r}, "
+            "serial={0.serial!r}, "
+            "receiver={0.receiver!r}, "
+            "firmware={0.firmware!r}"
             ")>".format(self)
+        )

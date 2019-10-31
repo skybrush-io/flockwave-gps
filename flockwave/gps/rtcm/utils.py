@@ -3,7 +3,7 @@
 from builtins import range
 
 
-__all__ = ("count_bits", )
+__all__ = ("count_bits",)
 
 # Construct a helper table for the _count_bits function
 _count_bits_table = [0] * 256
@@ -22,6 +22,8 @@ def count_bits(value):
         int: the number of set bits in the given value
     """
     assert value >= 0 and value < 0x1000000
-    return _count_bits_table[value & 0xFF] + \
-        _count_bits_table[(value >> 8) & 0xFF] + \
-        _count_bits_table[(value >> 16) & 0xFF]
+    return (
+        _count_bits_table[value & 0xFF]
+        + _count_bits_table[(value >> 8) & 0xFF]
+        + _count_bits_table[(value >> 16) & 0xFF]
+    )

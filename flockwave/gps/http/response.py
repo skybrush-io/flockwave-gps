@@ -1,12 +1,11 @@
 """Simple HTTP response object for the low-level HTTP library."""
 
-from __future__ import absolute_import
-
 from contextlib import closing
+
 from .dechunkers import NullDechunker, ResponseDechunker
 from .errors import ResponseError
 
-__all__ = ("Response", )
+__all__ = ("Response",)
 
 
 class Response(object):
@@ -33,8 +32,9 @@ class Response(object):
         with closing(self.sock.makefile("rb", 0)) as fp:
             line = fp.readline()
             if not line:
-                raise ResponseError("Connection closed unexpectedly by the "
-                                    "remote server")
+                raise ResponseError(
+                    "Connection closed unexpectedly by the " "remote server"
+                )
 
             parts = line.strip().split(None, 2) if line else []
             if len(parts) < 3 or parts[0] not in (b"HTTP/1.1", b"ICY"):
@@ -43,8 +43,7 @@ class Response(object):
             self._protocol = parts[0]
             code = parts[1]
             if code != b"200":
-                raise ResponseError("Received HTTP response: {0!r}"
-                                    .format(code))
+                raise ResponseError("Received HTTP response: {0!r}".format(code))
 
             if self._protocol == b"ICY":
                 return
@@ -55,8 +54,9 @@ class Response(object):
                     break
                 key, sep, value = line.partition(b":")
                 if not sep:
-                    raise ValueError("Found invalid HTTP header line: {0!r}"
-                                     .format(line))
+                    raise ValueError(
+                        "Found invalid HTTP header line: {0!r}".format(line)
+                    )
                 self._headers[key.capitalize()] = value.lstrip()
 
     def _process_headers(self):

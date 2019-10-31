@@ -1,7 +1,5 @@
 """Constants used in several places throughout the GPS package."""
 
-from __future__ import division
-
 __all__ = ("WGS84", "GPS_PI", "SPEED_OF_LIGHT_M_S", "SPEED_OF_LIGHT_KM_S")
 
 
@@ -18,7 +16,7 @@ class WGS84(object):
     INVERSE_FLATTENING = 298.257223563
 
     #: Gravitational constant times Earth's mass
-    GRAVITATIONAL_CONSTANT_TIMES_MASS = 3.986005e+14
+    GRAVITATIONAL_CONSTANT_TIMES_MASS = 3.986005e14
 
     #: Earth's rotation rate [rad/sec]
     ROTATION_RATE_IN_RADIANS_PER_SEC = 7.2921151467e-5
@@ -39,8 +37,9 @@ class WGS84(object):
     POLAR_RADIUS_IN_METERS = EQUATORIAL_RADIUS_IN_METERS * (1 - FLATTENING)
 
     #: Mean radius of Earth in the WGS ellipsoid model, as defined by IUGG
-    MEAN_RADIUS_IN_METERS = (2 * EQUATORIAL_RADIUS_IN_METERS +
-                             POLAR_RADIUS_IN_METERS) / 3
+    MEAN_RADIUS_IN_METERS = (
+        2 * EQUATORIAL_RADIUS_IN_METERS + POLAR_RADIUS_IN_METERS
+    ) / 3
 
 
 #: Value of pi used in some GPS-specific calculations.

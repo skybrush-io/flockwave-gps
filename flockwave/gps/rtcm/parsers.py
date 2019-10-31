@@ -1,13 +1,10 @@
 """Parser that parses streamed RTCM V3 messages."""
 
-from __future__ import division, print_function
-
 from abc import ABCMeta, abstractmethod
 from builtins import bytes, range
 from bitstring import ConstBitStream
 from enum import Enum
 from flockwave.gps.crc import crc24q
-from future.utils import with_metaclass
 
 from .packets import RTCMV2Packet, RTCMV3Packet
 
@@ -25,14 +22,15 @@ class ChecksumError(RuntimeError):
     """
 
     def __init__(self, packet, parity):
-        super(RuntimeError, self).__init__("Dropped packet of length {0} due "
-                                           "to checksum mismatch".format(
-                                               len(packet)))
+        super(RuntimeError, self).__init__(
+            "Dropped packet of length {0} due "
+            "to checksum mismatch".format(len(packet))
+        )
         self.packet = packet
         self.parity = parity
 
 
-class RTCMParser(with_metaclass(ABCMeta, object)):
+class RTCMParser(metaclass=ABCMeta):
     """Superclass for RTCM V2 and V3 parsers."""
 
     def __init__(self, callback=None, max_packet_length=None):
@@ -66,8 +64,9 @@ class RTCMParser(with_metaclass(ABCMeta, object)):
                 if packet is not None:
                     yield packet
             except ChecksumError as ex:
-                for packet in self._recover_from_checksum_mismatch(ex.packet,
-                                                                   ex.parity):
+                for packet in self._recover_from_checksum_mismatch(
+                    ex.packet, ex.parity
+                ):
                     yield packet
 
     @abstractmethod
@@ -103,8 +102,12 @@ class RTCMV2Parser(RTCMParser):
     PREAMBLE = 0x66
 
     PARITY_FORMULA = [
-        0xBB1F3480, 0x5D8F9A40, 0xAEC7CD00,
-        0x5763E680, 0x6BB1F340, 0x8B7A89C0
+        0xBB1F3480,
+        0x5D8F9A40,
+        0xAEC7CD00,
+        0x5763E680,
+        0x6BB1F340,
+        0x8B7A89C0,
     ]
 
     def __init__(self, *args, **kwds):
@@ -243,8 +246,7 @@ class RTCMV3Parser(RTCMParser):
         :return: whether the packet has the given parity
         :rtype: bool
         """
-        return crc24q(packet) == \
-            (parity[0] << 16) + (parity[1] << 8) + (parity[2])
+        return crc24q(packet) == (parity[0] << 16) + (parity[1] << 8) + (parity[2])
 
     def _feed_byte(self, byte):
         if self._state == RTCMV3ParserState.START:
@@ -259,10 +261,13 @@ class RTCMV3Parser(RTCMParser):
             # Reading packet length
             self._packet.append(byte)
             if len(self._packet) >= 3:
-                self._packet_length = ((self._packet[1] & 0x03) << 8) + \
-                    self._packet[2] + 3
-                if self.max_packet_length is not None \
-                        and self._packet_length > self.max_packet_length:
+                self._packet_length = (
+                    ((self._packet[1] & 0x03) << 8) + self._packet[2] + 3
+                )
+                if (
+                    self.max_packet_length is not None
+                    and self._packet_length > self.max_packet_length
+                ):
                     # We are probably out of sync, let's just reset the parser
                     self.reset()
                 elif self._packet_length > 3:
@@ -328,10 +333,7 @@ class RTCMFormatAutodetectingParser(RTCMParser):
 
     def __init__(self, *args, **kwds):
         """Constructor."""
-        self._subparsers = [
-            RTCMV2Parser(*args, **kwds),
-            RTCMV3Parser(*args, **kwds)
-        ]
+        self._subparsers = [RTCMV2Parser(*args, **kwds), RTCMV3Parser(*args, **kwds)]
         super(RTCMFormatAutodetectingParser, self).__init__(*args, **kwds)
 
     def reset(self):
@@ -365,8 +367,7 @@ class RTCMFormatAutodetectingParser(RTCMParser):
                 # We get here if we have already chosen the subparser
                 # and the chosen subparser subsequently throws checksum
                 # errors.
-                recover = self._chosen_subparser.\
-                    _recover_from_checksum_mismatch
+                recover = self._chosen_subparser._recover_from_checksum_mismatch
                 for packet in recover(ex.packet, ex.parity):
                     yield packet
 

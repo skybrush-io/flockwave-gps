@@ -3,16 +3,15 @@
 Currently we support RTCM V2 only; V3 support may come later.
 """
 
-from __future__ import division
-
 from builtins import next, range
 from bitstring import BitArray, pack
 from itertools import cycle
+
 from .packets import RTCMV2Packet
 from .utils import count_bits
 
 
-__all__ = ("RTCMV2Writer", )
+__all__ = ("RTCMV2Writer",)
 
 
 class RTCMV2Writer(object):
@@ -25,12 +24,12 @@ class RTCMV2Writer(object):
 
     PREAMBLE = 0x66
     _PARITY_FORMULA = [
-        (0, 0xec7cd2),   # noqa: bits 0, 1, 2, 4, 5, 9, 10, 11, 12, 13, 16, 17, 19, 22
-        (1, 0x763e69),   # noqa: bits 1, 2, 3, 5, 6, 10, 11, 12, 13, 14, 17, 18, 20, 23
-        (0, 0xbb1f34),   # noqa: bits 0, 2, 3, 4, 6, 7, 11, 12, 13, 14, 15, 18, 19, 21
-        (1, 0x5d8f9a),   # noqa: bits 1, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 19, 20, 22
-        (1, 0xaec7cd),   # noqa: bits 0, 2, 4, 5, 6, 8, 9, 13, 14, 15, 16, 17, 20, 21, 23
-        (0, 0x2dea27),   # noqa: bits 2, 4, 5, 7, 8, 9, 10, 12, 14, 18, 21, 22, 23
+        (0, 0xEC7CD2),  # noqa: bits 0, 1, 2, 4, 5, 9, 10, 11, 12, 13, 16, 17, 19, 22
+        (1, 0x763E69),  # noqa: bits 1, 2, 3, 5, 6, 10, 11, 12, 13, 14, 17, 18, 20, 23
+        (0, 0xBB1F34),  # noqa: bits 0, 2, 3, 4, 6, 7, 11, 12, 13, 14, 15, 18, 19, 21
+        (1, 0x5D8F9A),  # noqa: bits 1, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 19, 20, 22
+        (1, 0xAEC7CD),  # noqa: bits 0, 2, 4, 5, 6, 8, 9, 13, 14, 15, 16, 17, 20, 21, 23
+        (0, 0x2DEA27),  # noqa: bits 2, 4, 5, 7, 8, 9, 10, 12, 14, 18, 21, 22, 23
     ]
 
     def __init__(self, fp=None):
@@ -81,8 +80,9 @@ class RTCMV2Writer(object):
         try:
             message.write_body(bits)
         except NotImplementedError:
-            raise NotImplementedError("Unsupported RTCM v2 packet type: "
-                                      "{0!r}".format(message.packet_type))
+            raise NotImplementedError(
+                "Unsupported RTCM v2 packet type: " "{0!r}".format(message.packet_type)
+            )
 
         self._prepend_message_header(bits, message, time_of_week)
         if add_parities:
@@ -121,8 +121,9 @@ class RTCMV2Writer(object):
             BitArray: the encoded bits
         """
         if len(bits) % 24 != 0:
-            raise ValueError("bit array length must be divisible by 24 at "
-                             "this point")
+            raise ValueError(
+                "bit array length must be divisible by 24 at " "this point"
+            )
 
         # Okay, this is crazy. First we append six parity bits to every data
         # word. Each data word consists of 24 bits. The parity algorithm is
@@ -135,10 +136,10 @@ class RTCMV2Writer(object):
         # (in binary), and encoded into bytes.
         result = BitArray()
         for start in range(0, len(bits), 24):
-            word = self._encode_word(bits[start:(start + 24)])
+            word = self._encode_word(bits[start : (start + 24)])
             for chunk_start in range(0, len(word), 6):
                 result.append((False, True))
-                result.append(reversed(word[chunk_start:(chunk_start + 6)]))
+                result.append(reversed(word[chunk_start : (chunk_start + 6)]))
         return result
 
     def _encode_word(self, bits):
@@ -155,8 +156,9 @@ class RTCMV2Writer(object):
         parities = []
         word = bits.uintbe
         for previous_parity_index, mask in self._PARITY_FORMULA:
-            num_set_bits = count_bits(word & mask) + \
-                self.previous_parities[previous_parity_index]
+            num_set_bits = (
+                count_bits(word & mask) + self.previous_parities[previous_parity_index]
+            )
             parities.append(num_set_bits & 1)
         if self.previous_parities[1]:
             bits.invert()
@@ -176,8 +178,7 @@ class RTCMV2Writer(object):
                 attribute is not ``None``.
         """
         if len(bits) % 8 != 0:
-            raise ValueError("bit array length must be divisible by 8 at "
-                             "this point")
+            raise ValueError("bit array length must be divisible by 8 at " "this point")
 
         if time_of_week is None:
             mod_z_count = message.modified_z_count
@@ -185,8 +186,9 @@ class RTCMV2Writer(object):
             mod_z_count = self.calculate_modified_z_count(time_of_week)
 
         if mod_z_count is None:
-            raise ValueError("cannot encode this message without knowing "
-                             "the GPS time of week")
+            raise ValueError(
+                "cannot encode this message without knowing " "the GPS time of week"
+            )
 
         num_data_words = len(bits) // 24
         sequence_no = next(self.seq_generator)
@@ -195,13 +197,18 @@ class RTCMV2Writer(object):
         if need_padding:
             num_data_words += 1
 
-        health = 0        # assume UDRE scale factor = 1.0
+        health = 0  # assume UDRE scale factor = 1.0
 
-        header = pack("uint:8, uint:6, uint:10, uint:13, uint:3, uint:5, "
-                      "uint:3",
-                      self.PREAMBLE, message.packet_type, message.station_id,
-                      mod_z_count, sequence_no, num_data_words,
-                      health)
+        header = pack(
+            "uint:8, uint:6, uint:10, uint:13, uint:3, uint:5, " "uint:3",
+            self.PREAMBLE,
+            message.packet_type,
+            message.station_id,
+            mod_z_count,
+            sequence_no,
+            num_data_words,
+            health,
+        )
         bits[0:0] = header
         while len(bits) % 24 != 0:
             bits.append("0b10101010")

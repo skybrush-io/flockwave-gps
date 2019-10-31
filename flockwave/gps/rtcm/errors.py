@@ -2,7 +2,7 @@
 
 from flockwave.gps.errors import Error
 
-__all__ = ("ChecksumError", )
+__all__ = ("ChecksumError",)
 
 
 class ChecksumError(Error):
@@ -17,7 +17,9 @@ class ChecksumError(Error):
             packet (bytes): the payload of the packet that was dropped
             parity (bytes): the parity bytes of the packet that was dropped
         """
-        super(Error, self).__init__("Dropped packet of length {0} due to "
-                                    "checksum mismatch".format(len(packet)))
+        super(Error, self).__init__(
+            "Dropped packet of length {0} due to "
+            "checksum mismatch".format(len(packet))
+        )
         self.packet = packet
         self.parity = parity

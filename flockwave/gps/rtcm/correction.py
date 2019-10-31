@@ -50,5 +50,8 @@ class CorrectionData(namedtuple("CorrectionData", "svid prc prrc iode")):
             scaled_prc = (scaled_prc + 8) // 16
             scaled_prrc = (scaled_prrc + 8) // 16
         scaled_prrc = min(127, max(scaled_prrc, -128))
-        self._scale_factor, self._scaled_prc, self._scaled_prrc = \
-            factor, scaled_prc, scaled_prrc
+        self._scale_factor, self._scaled_prc, self._scaled_prrc = (
+            factor,
+            scaled_prc,
+            scaled_prrc,
+        )

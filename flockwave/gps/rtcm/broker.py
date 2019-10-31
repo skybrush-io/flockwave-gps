@@ -2,11 +2,8 @@
 and dispatches them to consumers.
 """
 
-from __future__ import absolute_import, print_function
-
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import defaultdict
-from future.utils import iteritems, itervalues, with_metaclass
 from select import select
 from time import time
 from .packets import RTCMV3Packet
@@ -53,7 +50,7 @@ class SocketBasedInterruptionHelper(object):
         server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         server.setblocking(0)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind(('127.0.0.1', 0))
+        server.bind(("127.0.0.1", 0))
         server_address = server.getsockname()
 
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -90,7 +87,7 @@ class SocketBasedInterruptionHelper(object):
         return self._server_socket.fileno()
 
     def interrupt(self):
-        self._client_socket.send(b'x')
+        self._client_socket.send(b"x")
 
 
 class RTCMPacketProducer(object):
@@ -119,8 +116,7 @@ class RTCMPacketProducer(object):
         """
         self.fp = fp
         self.parser = parser_factory()
-        self.name = name or "<{0.__class__.__name__}(fp={0.fp!r})>"\
-            .format(self)
+        self.name = name or "<{0.__class__.__name__}(fp={0.fp!r})>".format(self)
         self._maybe_closed = False
 
     def close(self):
@@ -156,7 +152,7 @@ class RTCMPacketProducer(object):
                 return []
 
 
-class RTCMPacketConsumer(with_metaclass(ABCMeta, object)):
+class RTCMPacketConsumer(metaclass=ABCMeta):
     """Base class for objects that consume RTCM packets of specific types."""
 
     @abstractproperty
@@ -226,7 +222,7 @@ class RTCMPacketBroker(object):
 
     def _calculate_time_to_next_packet(self):
         next_time = None
-        for producer_info in itervalues(self._producers):
+        for producer_info in self._producers.values():
             if producer_info.next_packet_time is None:
                 continue
             if next_time is None:
@@ -268,7 +264,8 @@ class RTCMPacketBroker(object):
         fileno = producer.fileno()
 
         self._producers[fileno] = ProducerInfo(
-            producer=producer, autoclose=autoclose, timeout=timeout)
+            producer=producer, autoclose=autoclose, timeout=timeout
+        )
         self._producers_changed = True
 
         self.interrupt()
@@ -278,7 +275,7 @@ class RTCMPacketBroker(object):
         ``autoclose=True``.
         """
         self._assert_not_closed()
-        for producer_info in itervalues(self._producers):
+        for producer_info in self._producers.values():
             if producer_info.autoclose:
                 producer_info.producer.close()
         self._closed = True
@@ -337,8 +334,7 @@ class RTCMPacketBroker(object):
         while not self._closed:
             if all_fds is None or self._producers_changed:
                 self._producers_changed = False
-                all_fds = list(self._producers.keys()) + \
-                    [self._interruption_helper]
+                all_fds = list(self._producers.keys()) + [self._interruption_helper]
 
             timeout = self._calculate_time_to_next_packet()
             if timeout is not None:
@@ -362,7 +358,7 @@ class RTCMPacketBroker(object):
         """
         now = time()
         timed_out = set()
-        for key, producer_info in iteritems(self._producers):
+        for producer_info in self._producers.values():
             next_time = producer_info.next_packet_time
             if next_time is not None and next_time < now:
                 timed_out.add(producer_info.producer)
@@ -377,7 +373,7 @@ class RTCMPacketBroker(object):
         :param consumer: the consumer to remove
         :type consumer: RTCMPacketConsumer
         """
-        for cls, consumers in iteritems(self._consumers):
+        for consumers in self._consumers.values():
             consumers.discard(consumer)
 
     def remove_producer(self, producer):
@@ -386,8 +382,9 @@ class RTCMPacketBroker(object):
         :param producer: the producer to remove
         :type producer: RTCMPacketProducer
         """
-        keys_to_delete = [key for key, value in iteritems(self._producers)
-                          if value.producer is producer]
+        keys_to_delete = [
+            key for key, value in self._producers.items() if value.producer is producer
+        ]
         for key in keys_to_delete:
             del self._producers[key]
 

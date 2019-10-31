@@ -1,14 +1,15 @@
 """Classes representing coordinates in various coordinate systems."""
 
-from __future__ import absolute_import, division
-
-from .constants import WGS84
 from math import atan2, cos, degrees, radians, sin, sqrt
 
+from .constants import WGS84
 
-__all__ = ("GPSCoordinate", "FlatEarthCoordinate",
-           "FlatEarthToGPSCoordinateTransformation",
-           "ECEFToGPSCoordinateTransformation")
+__all__ = (
+    "GPSCoordinate",
+    "FlatEarthCoordinate",
+    "FlatEarthToGPSCoordinateTransformation",
+    "ECEFToGPSCoordinateTransformation",
+)
 
 
 class AltitudeMixin(object):
@@ -52,7 +53,7 @@ class Vector3D(object):
         return cls(
             x=float(data.get("x", 0.0)),
             y=float(data.get("y", 0.0)),
-            z=float(data.get("z", 0.0))
+            z=float(data.get("z", 0.0)),
         )
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
@@ -79,13 +80,12 @@ class Vector3D(object):
         """
         if isinstance(other, Vector3D):
             return (
-                (self._x - other._x) ** 2 +
-                (self._y - other._y) ** 2 +
-                (self._z - other._z) ** 2
+                (self._x - other._x) ** 2
+                + (self._y - other._y) ** 2
+                + (self._z - other._z) ** 2
             ) ** 0.5
         else:
-            raise TypeError("expected Vector3D, got {0!r}".
-                            format(type(other)))
+            raise TypeError("expected Vector3D, got {0!r}".format(type(other)))
 
     def round(self, precision):
         """Rounds the coordinates of the vector to the given number of
@@ -168,9 +168,7 @@ class Vector3D(object):
 
     def __floordiv__(self, other):
         # Don't use keyword arguments below; it would break VelocityNED
-        return self.__class__(
-            self._x // other, self._y // other, self._z // other
-        )
+        return self.__class__(self._x // other, self._y // other, self._z // other)
 
     def __ifloordiv__(self, other):
         self._x //= other
@@ -189,19 +187,14 @@ class Vector3D(object):
 
     def __truediv__(self, other):
         # Don't use keyword arguments below; it would break VelocityNED
-        return self.__class__(
-            self.x / other, self.y / other, self.z / other
-        )
+        return self.__class__(self.x / other, self.y / other, self.z / other)
 
     def __mul__(self, other):
         # Don't use keyword arguments below; it would break VelocityNED
-        return self.__class__(
-            self.x * other, self.y * other, self.z * other
-        )
+        return self.__class__(self.x * other, self.y * other, self.z * other)
 
     def __repr__(self):
-        return "{0.__class__.__name__}(x={0.x!r}, y={0.y!r}, z={0.z!r})"\
-            .format(self)
+        return "{0.__class__.__name__}(x={0.x!r}, y={0.y!r}, z={0.z!r})".format(self)
 
 
 class VelocityNED(Vector3D):
@@ -219,7 +212,7 @@ class VelocityNED(Vector3D):
         return cls(
             north=float(data.get("north", 0.0)),
             east=float(data.get("east", 0.0)),
-            down=float(data.get("down", 0.0))
+            down=float(data.get("down", 0.0)),
         )
 
     def __init__(self, north=0.0, east=0.0, down=0.0, **kwds):
@@ -281,8 +274,10 @@ class VelocityNED(Vector3D):
         self.z = value
 
     def __repr__(self):
-        return "{0.__class__.__name__}(north={0.north!r}, east={0.east!r},"\
+        return (
+            "{0.__class__.__name__}(north={0.north!r}, east={0.east!r},"
             " down={0.down!r})".format(self)
+        )
 
 
 class ECEFCoordinate(Vector3D):
@@ -305,7 +300,7 @@ class GPSCoordinate(AltitudeMixin):
             lat=float(data.get("lat", 0.0)),
             lon=float(data.get("lon", 0.0)),
             amsl=float(data["amsl"]) if "amsl" in data else None,
-            agl=float(data["agl"]) if "agl" in data else None
+            agl=float(data["agl"]) if "agl" in data else None,
         )
 
     def __init__(self, lat=0.0, lon=0.0, amsl=None, agl=None):
@@ -326,10 +321,7 @@ class GPSCoordinate(AltitudeMixin):
 
     def copy(self):
         """Returns a copy of the current GPS coordinate object."""
-        return self.__class__(
-            lat=self.lat, lon=self.lon,
-            amsl=self.amsl, agl=self.agl
-        )
+        return self.__class__(lat=self.lat, lon=self.lon, amsl=self.amsl, agl=self.agl)
 
     @property
     def json(self):
@@ -369,8 +361,7 @@ class GPSCoordinate(AltitudeMixin):
         self._lat = round(self._lat, precision)
         self._lon = round(self._lon, precision)
 
-    def update(self, lat=None, lon=None, amsl=None, agl=None,
-               precision=None):
+    def update(self, lat=None, lon=None, amsl=None, agl=None, precision=None):
         """Updates the coordinates of this object.
 
         Parameters:
@@ -407,8 +398,13 @@ class GPSCoordinate(AltitudeMixin):
                 round the latitude and longitude to; ``None`` means to take
                 the values as they are
         """
-        self.update(lat=other.lat, lon=other.lon, amsl=other.amsl,
-                    agl=other.agl, precision=precision)
+        self.update(
+            lat=other.lat,
+            lon=other.lon,
+            amsl=other.amsl,
+            agl=other.agl,
+            precision=precision,
+        )
 
 
 class FlatEarthCoordinate(AltitudeMixin):
@@ -421,7 +417,7 @@ class FlatEarthCoordinate(AltitudeMixin):
             x=float(data.get("x", 0.0)),
             y=float(data.get("y", 0.0)),
             amsl=float(data["amsl"]) if "amsl" in data else None,
-            agl=float(data["agl"]) if "agl" in data else None
+            agl=float(data["agl"]) if "agl" in data else None,
         )
 
     def __init__(self, x=0.0, y=0.0, amsl=None, agl=None):
@@ -442,10 +438,7 @@ class FlatEarthCoordinate(AltitudeMixin):
 
     def copy(self):
         """Returns a copy of the current flat Earth coordinate object."""
-        return self.__class__(
-            x=self.x, y=self.y,
-            amsl=self.amsl, agl=self.agl
-        )
+        return self.__class__(x=self.x, y=self.y, amsl=self.amsl, agl=self.agl)
 
     @property
     def json(self):
@@ -505,8 +498,9 @@ class FlatEarthCoordinate(AltitudeMixin):
                 round the X and Y to; ``None`` means to take the
                 values as they are
         """
-        self.update(x=other.x, y=other.y, amsl=other.amsl, agl=other.agl,
-                    precision=precision)
+        self.update(
+            x=other.x, y=other.y, amsl=other.amsl, agl=other.agl, precision=precision
+        )
 
     @property
     def x(self):
@@ -541,8 +535,7 @@ class ECEFToGPSCoordinateTransformation(object):
         """
         self._eq_radius, self._polar_radius = 0.0, 0.0
         if radii is None:
-            self.radii = WGS84.EQUATORIAL_RADIUS_IN_METERS, \
-                WGS84.POLAR_RADIUS_IN_METERS
+            self.radii = WGS84.EQUATORIAL_RADIUS_IN_METERS, WGS84.POLAR_RADIUS_IN_METERS
         else:
             self.radii = radii
 
@@ -564,10 +557,12 @@ class ECEFToGPSCoordinateTransformation(object):
         self._eq_radius_sq = self._eq_radius ** 2
         self._polar_radius_sq = self._polar_radius ** 2
         self._ecc_sq = 1 - self._polar_radius_sq / self._eq_radius_sq
-        self._ep_sq_times_polar_radius = \
-            (self._eq_radius_sq - self._polar_radius_sq) / self._polar_radius
-        self._ecc_sq_times_eq_radius = \
+        self._ep_sq_times_polar_radius = (
+            self._eq_radius_sq - self._polar_radius_sq
+        ) / self._polar_radius
+        self._ecc_sq_times_eq_radius = (
             self._eq_radius - self._polar_radius_sq / self._eq_radius
+        )
 
     def to_ecef(self, coord):
         """Converts the given GPS coordinates to ECEF coordinates.
@@ -579,8 +574,9 @@ class ECEFToGPSCoordinateTransformation(object):
             ECEFCoordinate: the converted coordinate
         """
         if coord.amsl is None:
-            raise ValueError("GPS coordinates need an altitude relative "
-                             "to the mean sea level")
+            raise ValueError(
+                "GPS coordinates need an altitude relative " "to the mean sea level"
+            )
 
         lat, lon = radians(coord.lat), radians(coord.lon)
         height = coord.amsl
@@ -605,8 +601,10 @@ class ECEFToGPSCoordinateTransformation(object):
         p = sqrt(x ** 2 + y ** 2)
         th = atan2(self._eq_radius * z, self._polar_radius * p)
         lon = atan2(y, x)
-        lat = atan2(z + self._ep_sq_times_polar_radius * (sin(th) ** 3),
-                    p - self._ecc_sq_times_eq_radius * (cos(th) ** 3))
+        lat = atan2(
+            z + self._ep_sq_times_polar_radius * (sin(th) ** 3),
+            p - self._ecc_sq_times_eq_radius * (cos(th) ** 3),
+        )
         n = self._eq_radius / sqrt(1 - self._ecc_sq * (sin(lat) ** 2))
         amsl = p / cos(lat) - n
         lat, lon = degrees(lat), degrees(lon)
@@ -632,8 +630,7 @@ class FlatEarthToGPSCoordinateTransformation(object):
                 normalized = type
 
         if not normalized:
-            raise ValueError("unknown coordinate system type: {0!r}"
-                             .format(type))
+            raise ValueError("unknown coordinate system type: {0!r}".format(type))
 
         return normalized
 
@@ -705,10 +702,11 @@ class FlatEarthToGPSCoordinateTransformation(object):
 
         origin_lat_in_radians = radians(self._origin_lat)
 
-        x = (1 - eccentricity_sq * (sin(origin_lat_in_radians) ** 2))
+        x = 1 - eccentricity_sq * (sin(origin_lat_in_radians) ** 2)
         self._r1 = earth_radius * (1 - eccentricity_sq) / (x ** 1.5)
-        self._r2_over_cos_origin_lat_in_radians = \
+        self._r2_over_cos_origin_lat_in_radians = (
             earth_radius / sqrt(x) * cos(origin_lat_in_radians)
+        )
 
         self._sin_alpha = sin(radians(self._orientation))
         self._cos_alpha = cos(radians(self._orientation))
@@ -728,8 +726,8 @@ class FlatEarthToGPSCoordinateTransformation(object):
         """
         x, y = (
             radians(coord.lat - self._origin_lat) * self._r1,
-            radians(coord.lon - self._origin_lon) *
-            self._r2_over_cos_origin_lat_in_radians
+            radians(coord.lon - self._origin_lon)
+            * self._r2_over_cos_origin_lat_in_radians,
         )
         x, y = (
             x * self._cos_alpha + y * self._sin_alpha,
@@ -739,7 +737,7 @@ class FlatEarthToGPSCoordinateTransformation(object):
             x=x * self._xmul,
             y=y * self._ymul,
             amsl=coord.amsl * self._zmul if coord.amsl is not None else None,
-            agl=coord.agl * self._zmul if coord.agl is not None else None
+            agl=coord.agl * self._zmul if coord.agl is not None else None,
         )
 
     def to_gps(self, coord):
@@ -751,10 +749,7 @@ class FlatEarthToGPSCoordinateTransformation(object):
         Returns:
             GPSCoordinate: the converted coordinate
         """
-        x, y = (
-            coord.x * self._xmul,
-            coord.y * self._ymul
-        )
+        x, y = (coord.x * self._xmul, coord.y * self._ymul)
 
         x, y = (
             x * self._cos_alpha - y * self._sin_alpha,
@@ -765,7 +760,8 @@ class FlatEarthToGPSCoordinateTransformation(object):
         lon = degrees(y / self._r2_over_cos_origin_lat_in_radians)
 
         return GPSCoordinate(
-            lat=lat + self._origin_lat, lon=lon + self._origin_lon,
+            lat=lat + self._origin_lat,
+            lon=lon + self._origin_lon,
             amsl=coord.amsl * self._zmul if coord.amsl is not None else None,
-            agl=coord.agl * self._zmul if coord.agl is not None else None
+            agl=coord.agl * self._zmul if coord.agl is not None else None,
         )

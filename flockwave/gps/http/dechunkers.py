@@ -6,8 +6,9 @@ from enum import Enum
 
 __all__ = ("NullDechunker", "ResponseDechunker")
 
-ResponseDechunkerState = Enum("ResponseDechunkerState",
-                              "START HEADER_ENDING BODY BODY_ENDING")
+ResponseDechunkerState = Enum(
+    "ResponseDechunkerState", "START HEADER_ENDING BODY BODY_ENDING"
+)
 
 
 class NullDechunker(object):
@@ -63,17 +64,19 @@ class ResponseDechunker(object):
                 self._state = ResponseDechunkerState.HEADER_ENDING
             else:
                 try:
-                    self._chunk_length = (self._chunk_length << 4) + \
-                        int(byte, 16)
+                    self._chunk_length = (self._chunk_length << 4) + int(byte, 16)
                 except ValueError:
-                    raise ValueError("chunked transfer encoding protocol "
-                                     "violation; got {0!r} when expecting a "
-                                     "hexadecimal number".format(byte))
+                    raise ValueError(
+                        "chunked transfer encoding protocol "
+                        "violation; got {0!r} when expecting a "
+                        "hexadecimal number".format(byte)
+                    )
         elif self._state == ResponseDechunkerState.HEADER_ENDING:
             if byte != b"\n":
-                raise ValueError("chunked transfer encoding protocol "
-                                 "violation; got {0!r} when expecting '\\n'"
-                                 .format(byte))
+                raise ValueError(
+                    "chunked transfer encoding protocol "
+                    "violation; got {0!r} when expecting '\\n'".format(byte)
+                )
             self._state = ResponseDechunkerState.BODY
         elif self._state == ResponseDechunkerState.BODY:
             if self._chunk_length > 0:
@@ -81,16 +84,19 @@ class ResponseDechunker(object):
                 return byte
             else:
                 if byte != b"\r":
-                    raise ValueError("chunked transfer encoding protocol "
-                                     "violation; got {0!r} when expecting "
-                                     "'\\r'".format(byte))
+                    raise ValueError(
+                        "chunked transfer encoding protocol "
+                        "violation; got {0!r} when expecting "
+                        "'\\r'".format(byte)
+                    )
                 self._state = ResponseDechunkerState.BODY_ENDING
         elif self._state == ResponseDechunkerState.BODY_ENDING:
             if byte != b"\n":
-                raise ValueError("chunked transfer encoding protocol "
-                                 "violation; got {0!r} when expecting "
-                                 "'\\n'".format(byte))
+                raise ValueError(
+                    "chunked transfer encoding protocol "
+                    "violation; got {0!r} when expecting "
+                    "'\\n'".format(byte)
+                )
             self.reset()
         else:
-            raise ValueError("invalid decoder state: {0!r}".format(
-                self._state))
+            raise ValueError("invalid decoder state: {0!r}".format(self._state))

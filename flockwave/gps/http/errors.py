@@ -2,7 +2,7 @@
 
 from flockwave.gps.errors import Error
 
-__all__ = ("ResponseError", )
+__all__ = ("ResponseError",)
 
 
 class ResponseError(Error):

@@ -1,6 +1,6 @@
 """Base class for all the exceptions that are thrown from the GPS module."""
 
-__all__ = ("Error", )
+__all__ = ("Error",)
 
 
 class Error(RuntimeError):

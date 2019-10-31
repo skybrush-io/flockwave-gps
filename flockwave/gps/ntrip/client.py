@@ -1,10 +1,5 @@
 """NTRIP client related classes."""
 
-from __future__ import absolute_import
-
-from future import standard_library
-standard_library.install_aliases()
-
 import base64
 import click
 import sys
@@ -18,9 +13,12 @@ from .errors import InvalidResponseError
 __all__ = ("NtripClient", "NtripClientConnectionInfo")
 
 
-class NtripClientConnectionInfo(namedtuple("NtripClientConnectionInfo",
-                                           "server port username password "
-                                           "mountpoint version")):
+class NtripClientConnectionInfo(
+    namedtuple(
+        "NtripClientConnectionInfo",
+        "server port username password " "mountpoint version",
+    )
+):
     """Named tuple that holds the parameters required to connect to an
     NTRIP caster on the Internet.
     """
@@ -52,7 +50,7 @@ class NtripClientConnectionInfo(namedtuple("NtripClientConnectionInfo",
             "username": parts.username,
             "password": parts.password,
             "mountpoint": parts.path[1:] if len(parts.path) > 1 else None,
-            "version": version
+            "version": version,
         }
         return cls(**params)
 
@@ -63,9 +61,15 @@ class NtripClient(object):
     """
 
     @classmethod
-    def create(cls, server="www.euref-ip.net", port=2101,
-               username=None, password=None, mountpoint=None,
-               version=None):
+    def create(
+        cls,
+        server="www.euref-ip.net",
+        port=2101,
+        username=None,
+        password=None,
+        mountpoint=None,
+        version=None,
+    ):
         """Convenience constructor.
 
         Parameters:
@@ -102,8 +106,9 @@ class NtripClient(object):
                 version = 2
             if "/" in server and mountpoint is None:
                 server, _, mountpoint = server.partition("/")
-            conn = NtripClientConnectionInfo(server, port, username, password,
-                                             mountpoint, version)
+            conn = NtripClientConnectionInfo(
+                server, port, username, password, mountpoint, version
+            )
         return cls(connection_info=conn)
 
     def __init__(self, connection_info=None):
@@ -143,11 +148,11 @@ class NtripClient(object):
             request.add_header("Ntrip-Version", "Ntrip/2.0")
 
         if self.connection_info.username is not None:
-            credentials = base64.encodestring("{0.username}:{0.password}"
-                                              .format(self.connection_info))
+            credentials = base64.encodestring(
+                "{0.username}:{0.password}".format(self.connection_info)
+            )
             credentials = credentials.replace("\n", "")
-            request.add_header("Authorization",
-                               "Basic {0}".format(credentials))
+            request.add_header("Authorization", "Basic {0}".format(credentials))
 
         response = request.send()
         if response.protocol != "ICY":
@@ -160,8 +165,9 @@ class NtripClient(object):
         """
         observed_value = response.getheader(header)
         if observed_value != value:
-            raise InvalidResponseError("expected Content-type: gnss/data, "
-                                       "got {0!r}".format(observed_value))
+            raise InvalidResponseError(
+                "expected Content-type: gnss/data, " "got {0!r}".format(observed_value)
+            )
 
     def _url_for_mountpoint(self, mountpoint=None):
         """Returns the URL of the given mountpoint.
@@ -174,16 +180,27 @@ class NtripClient(object):
         :rtype: str
         """
         mountpoint = mountpoint or self.connection_info.mountpoint
-        return "http://{0.connection_info.server}:{0.connection_info.port}/{1}"\
-            .format(self, mountpoint)
+        return "http://{0.connection_info.server}:{0.connection_info.port}/{1}".format(
+            self, mountpoint
+        )
 
 
 @click.command()
 @click.argument("url")
-@click.option("-u", "--username", metavar="USERNAME", default=None,
-              help="the username to use when connecting")
-@click.option("-p", "--password", metavar="PASSWORD", default=None,
-              help="the password to use when connecting")
+@click.option(
+    "-u",
+    "--username",
+    metavar="USERNAME",
+    default=None,
+    help="the username to use when connecting",
+)
+@click.option(
+    "-p",
+    "--password",
+    metavar="PASSWORD",
+    default=None,
+    help="the password to use when connecting",
+)
 def ntrip_streamer(url, username, password):
     """Copies a stream from an NTRIP server directly into the standard
     output.

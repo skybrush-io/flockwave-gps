@@ -1,7 +1,5 @@
 """Ephemeris data related classes."""
 
-from __future__ import division
-
 import logging
 
 from builtins import range
@@ -10,13 +8,15 @@ from groundctrl.constants import GPS_PI, WGS84
 from groundctrl.vector import ECEFPosition
 from math import atan, cos, sin, sqrt
 
-__all__ = ("EphemerisData", )
+__all__ = ("EphemerisData",)
 
-_EphemerisData = namedtuple("EphemerisData",
-                            "week iodc iode tow toc toe tgd af2 af1 af0 crs "
-                            "delta_n m0 cuc eccentricity cus sqrt_a cic "
-                            "omega0 cis i0 crc omega omega_dot i_dot flags "
-                            "svid")
+_EphemerisData = namedtuple(
+    "EphemerisData",
+    "week iodc iode tow toc toe tgd af2 af1 af0 crs "
+    "delta_n m0 cuc eccentricity cus sqrt_a cic "
+    "omega0 cis i0 crc omega omega_dot i_dot flags "
+    "svid",
+)
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class EphemerisData(_EphemerisData):
     # http://www.trimble.com/OEM_ReceiverHelp/V4.44/en/ICD_Pkt_Response55h_GPSEph.html
 
     @property
-    def a(self):           # noqa
+    def a(self):  # noqa
         return self.sqrt_a ** 2
 
     def calculate_satellite_position(self, transmit_time=0, time_of_flight=0):
@@ -69,9 +69,10 @@ class EphemerisData(_EphemerisData):
             if abs(E - E_old) < 1e-12:
                 break
         else:
-            log.warn("Kepler equation did not converge for satellite "
-                     "{0.svid} (last difference = {1})".format(
-                         self, E - E_old))
+            log.warn(
+                "Kepler equation did not converge for satellite "
+                "{0.svid} (last difference = {1})".format(self, E - E_old)
+            )
 
         sin_e, cos_e = sin(E), cos(E)
         snu = sqrt(1 - ecc ** 2) * sin_e / (1 - ecc * cos_e)
@@ -107,8 +108,7 @@ class EphemerisData(_EphemerisData):
         x_dash = r * cos(u)
         y_dash = r * sin(u)
 
-        wc = self.omega0 + (self.omega_dot - omega_e_dot) * T - \
-            omega_e_dot * self.toe
+        wc = self.omega0 + (self.omega_dot - omega_e_dot) * T - omega_e_dot * self.toe
 
         cos_wc, sin_wc = cos(wc), sin(wc)
         cos_i = cos(i)
@@ -116,24 +116,24 @@ class EphemerisData(_EphemerisData):
         pos = ECEFPosition(
             x=x_dash * cos_wc - y_dash * cos_i * sin_wc,
             y=x_dash * sin_wc + y_dash * cos_i * cos_wc,
-            z=y_dash * sin(i)
+            z=y_dash * sin(i),
         )
         rel_term = -4.442807633e-10 * ecc * self.sqrt_a * sin_e
 
         if time_of_flight != 0:
-            omega_e_dot = 7.292115E-5
+            omega_e_dot = 7.292115e-5
             alpha = time_of_flight * omega_e_dot
             pos = pos._replace(
                 x=pos.x * cos(alpha) + pos.y * sin(alpha),
-                y=pos.y * cos(alpha) - pos.x * sin(alpha)
+                y=pos.y * cos(alpha) - pos.x * sin(alpha),
             )
 
         return pos, rel_term
 
     @property
-    def issue_of_data_clock(self):          # noqa
+    def issue_of_data_clock(self):  # noqa
         return self.iodc
 
     @property
-    def issue_of_data_ephemeris(self):      # noqa
+    def issue_of_data_ephemeris(self):  # noqa
         return self.iode

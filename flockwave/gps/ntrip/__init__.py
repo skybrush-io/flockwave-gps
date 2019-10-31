@@ -4,8 +4,6 @@ This library can be used to connect to NTRIP casters and read the raw
 RTCM streams.
 """
 
-from __future__ import absolute_import
-
 from .errors import NtripError
 
-__all__ = ("NtripError", )
+__all__ = ("NtripError",)
