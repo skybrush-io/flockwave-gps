@@ -50,11 +50,7 @@ class Vector3D(object):
     @classmethod
     def from_json(cls, data):
         """Creates a generic 3D vector from its JSON representation."""
-        return cls(
-            x=float(data.get("x", 0.0)),
-            y=float(data.get("y", 0.0)),
-            z=float(data.get("z", 0.0)),
-        )
+        return cls(x=float(data[0]), y=float(data[1]), z=float(data[2]))
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
         """Constructor.
@@ -137,7 +133,7 @@ class Vector3D(object):
     @property
     def json(self):
         """Returns the JSON representation of the coordinate."""
-        return {"x": self._x, "y": self._y, "z": self._z}
+        return [self._x, self._y, self._z]
 
     @property
     def x(self):
@@ -210,11 +206,7 @@ class VelocityNED(Vector3D):
     @classmethod
     def from_json(cls, data):
         """Creates a NED velocity vector from its JSON representation."""
-        return cls(
-            north=data.get("north", 0) * 1e-3,
-            east=data.get("east", 0) * 1e-3,
-            down=data.get("down", 0) * 1e-3,
-        )
+        return cls(north=data[0] * 1e-3, east=data[1] * 1e-3, down=data[2] * 1e-3)
 
     def __init__(self, north=0.0, east=0.0, down=0.0, **kwds):
         """Constructor.
@@ -245,11 +237,11 @@ class VelocityNED(Vector3D):
     @Vector3D.json.getter
     def json(self):
         """Returns the JSON representation of the coordinate."""
-        return {
-            "north": int(round(self._x * 1e3)),
-            "east": int(round(self._y * 1e3)),
-            "down": int(round(self._z * 1e3)),
-        }
+        return [
+            int(round(self._x * 1e3)),
+            int(round(self._y * 1e3)),
+            int(round(self._z * 1e3)),
+        ]
 
     @property
     def north(self):
@@ -301,11 +293,12 @@ class GPSCoordinate(AltitudeMixin):
     @classmethod
     def from_json(cls, data):
         """Creates a GPS coordinate from its JSON representation."""
+        length = len(data)
         return cls(
-            lat=data.get("lat", 0) * 1e-7,
-            lon=data.get("lon", 0) * 1e-7,
-            amsl=(data["amsl"] * 1e-3) if "amsl" in data else None,
-            agl=(data["agl"] * 1e-3) if "agl" in data else None,
+            lat=data[0] * 1e-7,
+            lon=data[1] * 1e-7,
+            amsl=data[2] * 1e-3 if length > 2 and data[2] is not None else None,
+            agl=data[3] * 1e-3 if length > 3 and data[3] is not None else None,
         )
 
     def __init__(self, lat=0.0, lon=0.0, amsl=None, agl=None):
@@ -331,15 +324,12 @@ class GPSCoordinate(AltitudeMixin):
     @property
     def json(self):
         """Returns the JSON representation of the coordinate."""
-        result = {
-            "lat": int(round(self._lat * 1e7)),
-            "lon": int(round(self._lon * 1e7)),
-        }
-        if self.amsl is not None:
-            result["amsl"] = int(round(self._amsl * 1e3))
-        if self.agl is not None:
-            result["agl"] = int(round(self._agl * 1e3))
-        return result
+        return [
+            int(round(self._lat * 1e7)),
+            int(round(self._lon * 1e7)),
+            int(round(self._amsl * 1e3)) if self._amsl is not None else None,
+            int(round(self._agl * 1e3)) if self._agl is not None else None,
+        ]
 
     @property
     def lat(self):
@@ -421,11 +411,12 @@ class FlatEarthCoordinate(AltitudeMixin):
     @classmethod
     def from_json(cls, data):
         """Creates a flat Earth coordinate from its JSON representation."""
+        length = len(data)
         return cls(
-            x=data.get("x", 0) * 1e-3,
-            y=data.get("y", 0) * 1e-3,
-            amsl=(data["amsl"] * 1e-3) if "amsl" in data else None,
-            agl=(data["agl"] * 1e-3) if "agl" in data else None,
+            x=data[0] * 1e-3,
+            y=data[1] * 1e-3,
+            amsl=data[2] * 1e-3 if length > 2 and data[2] is not None else None,
+            agl=data[3] * 1e-3 if length > 3 and data[3] is not None else None,
         )
 
     def __init__(self, x=0.0, y=0.0, amsl=None, agl=None):
@@ -451,12 +442,12 @@ class FlatEarthCoordinate(AltitudeMixin):
     @property
     def json(self):
         """Returns the JSON representation of the coordinate."""
-        result = {"x": int(round(self._x * 1e3)), "y": int(round(self._y * 1e3))}
-        if self.amsl is not None:
-            result["amsl"] = int(round(self._amsl * 1e3))
-        if self.agl is not None:
-            result["agl"] = int(round(self._agl * 1e3))
-        return result
+        return [
+            int(round(self._x * 1e3)),
+            int(round(self._y * 1e3)),
+            int(round(self._amsl * 1e3)) if self._amsl is not None else None,
+            int(round(self._agl * 1e3)) if self._agl is not None else None,
+        ]
 
     def round(self, precision):
         """Rounds the X and Y coordinates of the vector to the given
