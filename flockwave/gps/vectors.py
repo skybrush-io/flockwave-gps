@@ -202,17 +202,18 @@ class VelocityNED(Vector3D):
 
     The property named ``north`` is aliased to ``x``; ``east`` is aliased
     to ``y`` and ``down`` is aliased to ``z``. The JSON representation of
-    this class is updated to be conformant with the Flockwave protocol
-    specification.
+    this class is conformant with the Flockwave protocol specification;
+    therefore, the JSON representation stores velocities as integers in
+    mm/s instead of the raw floating-point values.
     """
 
     @classmethod
     def from_json(cls, data):
         """Creates a NED velocity vector from its JSON representation."""
         return cls(
-            north=float(data.get("north", 0.0)),
-            east=float(data.get("east", 0.0)),
-            down=float(data.get("down", 0.0)),
+            north=data.get("north", 0) * 1e-3,
+            east=data.get("east", 0) * 1e-3,
+            down=data.get("down", 0) * 1e-3,
         )
 
     def __init__(self, north=0.0, east=0.0, down=0.0, **kwds):
@@ -244,7 +245,11 @@ class VelocityNED(Vector3D):
     @Vector3D.json.getter
     def json(self):
         """Returns the JSON representation of the coordinate."""
-        return {"north": self._x, "east": self._y, "down": self._z}
+        return {
+            "north": int(round(self._x * 1e3)),
+            "east": int(round(self._y * 1e3)),
+            "down": int(round(self._z * 1e3)),
+        }
 
     @property
     def north(self):
@@ -297,10 +302,10 @@ class GPSCoordinate(AltitudeMixin):
     def from_json(cls, data):
         """Creates a GPS coordinate from its JSON representation."""
         return cls(
-            lat=float(data.get("lat", 0.0)),
-            lon=float(data.get("lon", 0.0)),
-            amsl=float(data["amsl"]) if "amsl" in data else None,
-            agl=float(data["agl"]) if "agl" in data else None,
+            lat=data.get("lat", 0) * 1e-7,
+            lon=data.get("lon", 0) * 1e-7,
+            amsl=(data["amsl"] * 1e-3) if "amsl" in data else None,
+            agl=(data["agl"] * 1e-3) if "agl" in data else None,
         )
 
     def __init__(self, lat=0.0, lon=0.0, amsl=None, agl=None):
@@ -326,11 +331,14 @@ class GPSCoordinate(AltitudeMixin):
     @property
     def json(self):
         """Returns the JSON representation of the coordinate."""
-        result = {"lat": self._lat, "lon": self._lon}
+        result = {
+            "lat": int(round(self._lat * 1e7)),
+            "lon": int(round(self._lon * 1e7)),
+        }
         if self.amsl is not None:
-            result["amsl"] = self._amsl
+            result["amsl"] = int(round(self._amsl * 1e3))
         if self.agl is not None:
-            result["agl"] = self._agl
+            result["agl"] = int(round(self._agl * 1e3))
         return result
 
     @property
@@ -414,10 +422,10 @@ class FlatEarthCoordinate(AltitudeMixin):
     def from_json(cls, data):
         """Creates a flat Earth coordinate from its JSON representation."""
         return cls(
-            x=float(data.get("x", 0.0)),
-            y=float(data.get("y", 0.0)),
-            amsl=float(data["amsl"]) if "amsl" in data else None,
-            agl=float(data["agl"]) if "agl" in data else None,
+            x=data.get("x", 0) * 1e-3,
+            y=data.get("y", 0) * 1e-3,
+            amsl=(data["amsl"] * 1e-3) if "amsl" in data else None,
+            agl=(data["agl"] * 1e-3) if "agl" in data else None,
         )
 
     def __init__(self, x=0.0, y=0.0, amsl=None, agl=None):
@@ -443,11 +451,11 @@ class FlatEarthCoordinate(AltitudeMixin):
     @property
     def json(self):
         """Returns the JSON representation of the coordinate."""
-        result = {"x": self._x, "y": self._y}
+        result = {"x": int(round(self._x * 1e3)), "y": int(round(self._y * 1e3))}
         if self.amsl is not None:
-            result["amsl"] = self._amsl
+            result["amsl"] = int(round(self._amsl * 1e3))
         if self.agl is not None:
-            result["agl"] = self._agl
+            result["agl"] = int(round(self._agl * 1e3))
         return result
 
     def round(self, precision):
