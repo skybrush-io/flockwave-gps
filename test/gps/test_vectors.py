@@ -115,6 +115,28 @@ class FlatEarthToGPSCoordinateTransformationTest(unittest.TestCase):
         self.assertEqual(49, trans.origin.lat)
         self.assertEqual(17, trans.origin.lon)
 
+    def test_from_json(self):
+        """Tests whether a transformation can be constructed from JSON format."""
+        trans = FlatEarthToGPSCoordinateTransformation.from_json(
+            {"origin": [17.0, 49.0], "type": "neu", "orientation": "42.0"}
+        )
+
+        self.assertEqual("neu", trans.type)
+        self.assertEqual(42, trans.orientation)
+        self.assertEqual(49, trans.origin.lat)
+        self.assertEqual(17, trans.origin.lon)
+
+    def test_json(self):
+        """Tests whether the transformation can be converted to JSON format."""
+        origin = GPSCoordinate(lat=49, lon=17)
+        trans = FlatEarthToGPSCoordinateTransformation(
+            origin=origin, type="neu", orientation=42
+        )
+
+        self.assertDictEqual(
+            {"origin": [17.0, 49.0], "type": "neu", "orientation": "42.0"}, trans.json
+        )
+
     def test_conversion_in_nwu(self):
         """Tests whether the transformation from flat Earth to GPS coordinates
         and vice versa work with an NWU coordinate system.

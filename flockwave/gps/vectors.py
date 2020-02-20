@@ -633,6 +633,18 @@ class FlatEarthToGPSCoordinateTransformation(object):
 
         return normalized
 
+    @classmethod
+    def from_json(cls, json):
+        """Constructs a transformation from its JSON representation previously
+        obtained with the ``json`` property.
+        """
+        lon, lat = json["origin"]
+        return cls(
+            origin=GPSCoordinate(lon=lon, lat=lat),
+            orientation=json["orientation"],
+            type=json["type"],
+        )
+
     def __init__(self, origin=None, orientation=0, type="nwu"):
         """Constructor.
 
@@ -653,6 +665,15 @@ class FlatEarthToGPSCoordinateTransformation(object):
         self._type = self._normalize_type(type)
 
         self.origin = origin if origin is not None else GPSCoordinate()
+
+    @property
+    def json(self):
+        """Returns the JSON representation of the coordinate transformation."""
+        return {
+            "origin": [self._origin_lon, self._origin_lat],
+            "orientation": str(self._orientation),
+            "type": self._type,
+        }
 
     @property
     def orientation(self):
