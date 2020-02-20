@@ -6,5 +6,6 @@
 build/
 dist/
 .eggs/
+.pytest_cache/
 .tox/
 .venv/
