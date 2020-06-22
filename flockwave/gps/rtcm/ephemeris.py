@@ -4,9 +4,11 @@ import logging
 
 from builtins import range
 from collections import namedtuple
-from groundctrl.constants import GPS_PI, WGS84
-from groundctrl.vector import ECEFPosition
 from math import atan, cos, sin, sqrt
+
+from flockwave.gps.constants import GPS_PI, WGS84
+from flockwave.gps.vectors import ECEFCoordinate
+
 
 __all__ = ("EphemerisData",)
 
@@ -44,7 +46,7 @@ class EphemerisData(_EphemerisData):
             time_of_flight (float): the time of flight (if known), in seconds
 
         Returns:
-            (ECEFPosition, float): the satellite position in ECEF coordinates
+            (ECEFCoordinate, float): the satellite position in ECEF coordinates
                 and the relativistic correction term
         """
         mu = WGS84.GRAVITATIONAL_CONSTANT_TIMES_MASS
@@ -113,7 +115,7 @@ class EphemerisData(_EphemerisData):
         cos_wc, sin_wc = cos(wc), sin(wc)
         cos_i = cos(i)
 
-        pos = ECEFPosition(
+        pos = ECEFCoordinate(
             x=x_dash * cos_wc - y_dash * cos_i * sin_wc,
             y=x_dash * sin_wc + y_dash * cos_i * cos_wc,
             z=y_dash * sin(i),

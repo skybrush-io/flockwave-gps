@@ -11,10 +11,10 @@ ResponseDechunkerState = Enum(
 )
 
 
-class NullDechunker(object):
+class NullDechunker:
     """Null dechunker that is suitable for un-chunked HTTP responses."""
 
-    def feed(self, data):
+    def feed(self, data: bytes) -> bytes:
         """Returns the data fed into the dechunker without changes.
 
         Parameters:
@@ -26,7 +26,7 @@ class NullDechunker(object):
         return data
 
 
-class ResponseDechunker(object):
+class ResponseDechunker:
     """Merges the chunks of a HTTP response that is streamed using chunked
     transfer encoding.
     """
@@ -35,12 +35,12 @@ class ResponseDechunker(object):
         """Constructor."""
         self.reset()
 
-    def feed(self, data):
+    def feed(self, data: bytes) -> bytes:
         """Feeds some bytes into the dechunker object. Returns dechunked
         data.
 
         Parameters:
-            data (bytes): the bytes to feed into the dechunker
+            data: the bytes to feed into the dechunker
 
         Returns:
             bytes: the dechunked data
@@ -52,7 +52,7 @@ class ResponseDechunker(object):
                 result.append(byte)
         return b"".join(result)
 
-    def reset(self):
+    def reset(self) -> None:
         """Resets the dechunker to its ground state."""
         self._current_chunk = []
         self._chunk_length = 0

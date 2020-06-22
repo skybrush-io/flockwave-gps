@@ -1,9 +1,8 @@
 """Simple HTTP request object for the low-level HTTP library."""
 
-import socket
-
 from collections import OrderedDict
 from io import BytesIO
+from typing import Dict, Optional
 from urllib.parse import quote, urlparse
 
 from .response import Response
@@ -11,62 +10,63 @@ from .response import Response
 __all__ = ("Request",)
 
 
-class Request(object):
+class Request:
     """HTTP request object."""
 
-    def __init__(self, url, data=None, headers={}):
+    def __init__(
+        self, url: bytes, data: Optional[bytes] = None, headers: Dict[str, bytes] = None
+    ):
         """Constructs a new HTTP request object.
 
         Parameters:
-            url (bytes): the URL to load
-            data (bytes or None): the data to POST to the URL or ``None`` if
-                no data should be posted. Currently unused, we have it here
-                for compatibility with Python's own Request class from
-                ``urllib2``.
+            url: the URL to load
+            data: the data to POST to the URL or ``None`` if no data should be
+                posted. Currently unused, we have it here for compatibility with
+                Python's own Request class from ``urllib2``.
             headers (dict): additional headers of the request.
         """
         self.url = url
         self.data = data
         self.headers = OrderedDict()
-        for key, value in headers.items():
+        for key, value in (headers or {}).items():
             self.add_header(key, value)
 
-    def add_header(self, key, val):
+    def add_header(self, key: str, val: bytes) -> None:
         """Adds an HTTP header to the request.
 
         Parameters:
-            key (bytes): the name of the header to add. It will be
-                capitalized.
-            val (bytes): the value of the header to add
+            key: the name of the header to add. It will be capitalized.
+            val: the value of the header to add
         """
         self.headers[key.capitalize()] = val
 
-    def has_header(self, key):
+    def has_header(self, key: str) -> bool:
         """Checks whether the request contains the given HTTP header.
 
         Parameters:
-            key (bytes): the name of the header to add. It will be
-                capitalized.
+            key: the name of the header to check. It will be capitalized.
         """
         return key.capitalize() in self.headers
 
-    def send(self, timeout=10):
+    async def send(self, timeout: float = 10) -> Response:
         """Sends the HTTP request and returns a Response_ object.
 
-        Parameters:
-            timeout (float): timeout in seconds for the connection attempt
-
         Returns:
-            Response: the response object corresponding to the request
+            the response object corresponding to the request
 
         Raises:
             NotImplementedError: when you have defined some data to POST
                 because POST requests are not supported yet
         """
+        try:
+            from trio import open_tcp_stream
+        except ImportError:
+            raise ImportError("You need to install 'trio' to use this method")
+
         if self.data is not None:
             raise NotImplementedError("POST requests not supported yet")
 
-        method = b"GET"
+        method = "GET"
         parts = urlparse(self.url)
 
         if not self.has_header("Host"):
@@ -78,7 +78,9 @@ class Request(object):
             self.add_header("Connection", "close")
 
         request = BytesIO()
-        request.write(b"{0} {1} HTTP/1.1\r\n".format(method, quote(parts.path)))
+        request.write(
+            "{0} {1} HTTP/1.1\r\n".format(method, quote(parts.path)).encode("ascii")
+        )
         for header, value in self.headers.items():
             header = header.encode("ascii")
             if header == "User-agent":
@@ -86,11 +88,13 @@ class Request(object):
                 # spell it like this
                 header = "User-Agent"
             value = value.encode("ascii")
-            request.write(b"{0}: {1}\r\n".format(header, value))
+            request.write(header)
+            request.write(b": ")
+            request.write(value)
+            request.write(b"\r\n")
         request.write(b"\r\n")
 
-        sock = socket.create_connection((parts.hostname, parts.port), timeout=timeout)
-        sock.send(request.getvalue())
+        stream = await open_tcp_stream(parts.hostname, parts.port)
+        await stream.send_all(request.getvalue())
 
-        response = Response(sock)
-        return response
+        return Response(stream)

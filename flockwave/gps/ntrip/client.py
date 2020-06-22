@@ -4,35 +4,40 @@ import base64
 import click
 import sys
 
-from collections import namedtuple
-from flockwave.gps.http import Request
+from dataclasses import dataclass
+from typing import Optional
 from urllib.parse import urlparse
+
+from flockwave.gps.http import Request
 
 from .errors import InvalidResponseError
 
 __all__ = ("NtripClient", "NtripClientConnectionInfo")
 
 
-class NtripClientConnectionInfo(
-    namedtuple(
-        "NtripClientConnectionInfo",
-        "server port username password " "mountpoint version",
-    )
-):
-    """Named tuple that holds the parameters required to connect to an
+@dataclass
+class NtripClientConnectionInfo:
+    """Dataclass that holds the parameters required to connect to an
     NTRIP caster on the Internet.
     """
+
+    host: str
+    port: int = 2101
+    username: Optional[str] = None
+    password: Optional[str] = None
+    mountpoint: Optional[str] = None
+    version: Optional[int] = None
 
     @classmethod
     def create_from_uri(cls, uri):
         """Creates a connection info object from a URI representation of the
         form::
 
-            ntrip://[<username>:<password>]@<server>:[<port>][/<mountpoint>]
+            ntrip://[<username>:<password>]@<host>:[<port>][/<mountpoint>]
 
         or::
 
-            ntrip1://[<username>:<password>]@<server>:[<port>][/<mountpoint>]
+            ntrip1://[<username>:<password>]@<host>:[<port>][/<mountpoint>]
         """
         if uri.startswith("ntrip1"):
             parts = urlparse(uri, scheme="ntrip1")
@@ -45,7 +50,7 @@ class NtripClientConnectionInfo(
         parts = urlparse(fake_uri, scheme="http")
 
         params = {
-            "server": parts.hostname,
+            "host": parts.hostname,
             "port": parts.port or 2101,
             "username": parts.username,
             "password": parts.password,
@@ -55,7 +60,7 @@ class NtripClientConnectionInfo(
         return cls(**params)
 
 
-class NtripClient(object):
+class NtripClient:
     """An NTRIP client object that reads DGPS correction data from an NTRIP
     caster.
     """
@@ -63,33 +68,30 @@ class NtripClient(object):
     @classmethod
     def create(
         cls,
-        server="www.euref-ip.net",
-        port=2101,
-        username=None,
-        password=None,
-        mountpoint=None,
-        version=None,
+        host: str = "www.euref-ip.net",
+        port: int = 2101,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        mountpoint: Optional[str] = None,
+        version: Optional[int] = None,
     ):
         """Convenience constructor.
 
         Parameters:
-            server (str): the hostname of the server. It may also be an
+            host: the hostname of the server. It may also be an
                 URI if it starts with ``ntrip://`.
-            port (int): the port of the server to connect to
-            username (str or None): the username to use for authenticated
-                streams
-            password (str or None): the password to use for authenticated
-                streams
-            mountpoint (str or None): the mountpoint to read the DGPS stream
-                from
-            version (int or None): the NTRIP protocol version that the
-                server speaks. ``None`` means the latest available version.
+            port: the port of the server to connect to
+            username: the username to use for authenticated streams
+            password: the password to use for authenticated streams
+            mountpoint: the mountpoint to read the RTCM messages from
+            version: the NTRIP protocol version that the server speaks.
+                ``None`` means the latest available version.
 
         Returns:
             NtripClient: a configured client object
         """
-        if server.startswith("ntrip"):
-            conn = NtripClientConnectionInfo.create_from_uri(server)
+        if host.startswith("ntrip://") or host.startswith("ntrip1://"):
+            conn = NtripClientConnectionInfo.create_from_uri(host)
             updates = {}
             if username is not None:
                 updates["username"] = username
@@ -104,36 +106,32 @@ class NtripClient(object):
         else:
             if version is None:
                 version = 2
-            if "/" in server and mountpoint is None:
-                server, _, mountpoint = server.partition("/")
+            if "/" in host and mountpoint is None:
+                server, _, mountpoint = host.partition("/")
             conn = NtripClientConnectionInfo(
                 server, port, username, password, mountpoint, version
             )
         return cls(connection_info=conn)
 
-    def __init__(self, connection_info=None):
+    def __init__(self, connection_info: Optional[NtripClientConnectionInfo] = None):
         """Constructor.
 
         In most cases, it is easier to use the ``create()`` class method.
 
         Parameters:
-            connection_info (NtripClientConnectionInfo): an object
-                describing how to connect to the
+            connection_info: an object describing how to connect to the server
         """
         self.connection_info = connection_info
 
-    def stream(self, mountpoint=None, timeout=10):
+    async def get_stream(self, mountpoint: Optional[str] = None, timeout: float = 10):
         """Returns a file-like object that will stream the DGPS data from
         the NTRIP caster.
 
         Parameters:
-            mountpoint (str or None): the mountpoint to connect to. May be
+            mountpoint: the mountpoint to connect to. May be
                 ``None``, in which case the mountpoint given in the
                 connection info object at construction time will be used.
-            timeout (float): timeout to use for the connection attempt,
-                in seconds
-            blocking (bool): whether the returned file-like object should
-                be in blocking mode
+            timeout: timeout to use for the connection attempt, in seconds
 
         Throws:
             InvalidResponseError: when the caster returned an invalid
@@ -154,9 +152,12 @@ class NtripClient(object):
             credentials = credentials.replace("\n", "")
             request.add_header("Authorization", "Basic {0}".format(credentials))
 
-        response = request.send()
-        if response.protocol != "ICY":
+        response = await request.send()
+        await response.ensure_headers_processed()
+
+        if response.protocol != b"ICY":
             self._check_header(response, "Content-type", "gnss/data")
+
         return response
 
     def _check_header(self, response, header, value):
@@ -166,23 +167,22 @@ class NtripClient(object):
         observed_value = response.getheader(header)
         if observed_value != value:
             raise InvalidResponseError(
-                "expected Content-type: gnss/data, " "got {0!r}".format(observed_value)
+                "expected Content-type: gnss/data, got {0!r}".format(observed_value)
             )
 
-    def _url_for_mountpoint(self, mountpoint=None):
+    def _url_for_mountpoint(self, mountpoint: Optional[str] = None) -> str:
         """Returns the URL of the given mountpoint.
 
-        :param mountpoint: the mountpoint to connect to. May be None, in which
-            case the mountpoint given in the connection info object at
-            construction time will be used.
-        :type mountpoint: str or None
-        :return: the URL of the given mountpoint
-        :rtype: str
+        Parameters:
+            mountpoint: the mountpoint to connect to. May be None, in which
+                case the mountpoint given in the connection info object at
+                construction time will be used.
+
+        Returns:
+            the URL of the given mountpoint
         """
         mountpoint = mountpoint or self.connection_info.mountpoint
-        return "http://{0.connection_info.server}:{0.connection_info.port}/{1}".format(
-            self, mountpoint
-        )
+        return f"http://{self.connection_info.host}:{self.connection_info.port}/{mountpoint}"
 
 
 @click.command()
@@ -214,14 +214,24 @@ def ntrip_streamer(url, username, password):
     password is optional.
 
     Example servers to try (if you have the right username and password):
-    www.euref-ip.net/BUTE0, ntrip://products.igs-ip.net/RTCM3EPH,
+    www.euref-ip.net/BUTE0, ntrip://ntrip.use-snip.com/RTCM3EPH,
     ntrip1://152.66.6.49/RTCM23
     """
+    from trio import run
+
     client = NtripClient.create(url, username=username, password=password)
-    stream = client.stream()
-    while True:
-        sys.stdout.write(stream.read())
-        sys.stdout.flush()
+
+    async def main():
+        stream = await client.get_stream()
+        while True:
+            data = await stream.read()
+            if not data:
+                print("Stream ended.", file=sys.stderr)
+                break
+            sys.stdout.buffer.write(data)
+            sys.stdout.flush()
+
+    run(main)
 
 
 if __name__ == "__main__":

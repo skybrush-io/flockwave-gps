@@ -2,11 +2,13 @@
 
 from bitstring import pack
 from builtins import chr, range
+from operator import attrgetter
+
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
 from flockwave.gps.vectors import ECEFCoordinate
+
 from .correction import CorrectionData
 from .ephemeris import EphemerisData
-from operator import attrgetter
 
 
 class RTCMParams(object):
