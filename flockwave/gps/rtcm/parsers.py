@@ -466,15 +466,15 @@ def create_rtcm_parser(
 
     Parameters:
         format: the RTCM format that the parser will use; must be one of
-            ``rtcmv2``, ``rtcmv3`` or ``auto``. 2 and 3 as integers can be used
-            as aliases for ``rtcmv2`` and ``rtcmv3``.
+            ``rtcm2``, ``rtcm3`` or ``auto``. 2 and 3 as integers can be used
+            as aliases for ``rtcm2`` and ``rtcmv3``.
 
     Returns:
         the parser function
     """
-    if format == "rtcmv2" or format == 2:
+    if format == "rtcm2" or format == 2:
         return RTCMV2Parser().feed
-    elif format == "rtcmv3" or format == 3:
+    elif format == "rtcm3" or format == 3:
         return RTCMV3Parser().feed
     elif format == "auto":
         return RTCMFormatAutodetectingParser().feed

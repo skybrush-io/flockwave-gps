@@ -1,21 +1,21 @@
 """Writer objects that write RTCM V2 or V3 messages.
-
-Currently we support RTCM V2 only; V3 support may come later.
 """
 
-from builtins import next, range
 from bitstring import BitArray, pack
 from itertools import cycle
+from typing import Callable, Optional, Union
 
-from .packets import RTCMV2Packet
+from flockwave.gps.crc import crc24q
+
+from .packets import RTCMPacket, RTCMV2Packet, RTCMV3Packet
 from .utils import count_bits
 
 
-__all__ = ("RTCMV2Writer",)
+__all__ = ("RTCMV2Encoder", "RTCMV3Encoder")
 
 
-class RTCMV2Writer:
-    """Writer that generates byte-level representations of an
+class RTCMV2Encoder:
+    """Encoder that generates byte-level representations of an
     RTCM V2 message.
 
     See this URL for more details:
@@ -32,17 +32,55 @@ class RTCMV2Writer:
         (0, 0x2DEA27),  # noqa: bits 2, 4, 5, 7, 8, 9, 10, 12, 14, 18, 21, 22, 23
     ]
 
-    def __init__(self, fp=None):
-        """Constructor.
-
-        Parameters:
-            fp (file-like): the stream to write the generated messages to.
-        """
-        self.fp = fp
+    def __init__(self):
+        """Constructor."""
         self.seq_generator = cycle(list(range(8)))
         self.previous_parities = False, False
 
-    def calculate_modified_z_count(self, time_of_week):
+    def encode(
+        self,
+        message: RTCMV2Packet,
+        time_of_week: Optional[int] = None,
+        add_parities: bool = True,
+    ) -> bytes:
+        """Encodes the given message into a bytes object.
+
+        Parameters:
+            message: the message to write
+            time_of_week: the current GPS time of week. ``None`` means that it
+                is not known, in which case we can encode the message only if
+                its *own* ``modified_z_count`` attribute is not ``None``.
+            add_parities: whether to add the parity bits and perform
+                the wire encoding of the message or not. When this parameter
+                is ``False``, the encoding stops at the phase when only the
+                data bits are assembled and the parity bits are not inserted
+                into the bit stream yet.
+
+        Returns:
+            the encoded message
+        """
+        assert isinstance(message, RTCMV2Packet)
+
+        bits = BitArray()
+
+        try:
+            message.write_body(bits)
+        except (NotImplementedError, AttributeError):
+            if hasattr(message, "bytes"):
+                bits = BitArray(bytes=message.bytes)
+            else:
+                raise NotImplementedError(
+                    "Unsupported RTCM v2 packet type: "
+                    "{0!r}".format(message.packet_type)
+                )
+
+        self._prepend_message_header(bits, message, time_of_week)
+        if add_parities:
+            bits = self._encode_message(bits)
+
+        return bits.tobytes()
+
+    def _calculate_modified_z_count(self, time_of_week: int):
         """Returns the current "modified Z count" value that is to be inserted
         into the header of every RTCM V2 message.
 
@@ -55,58 +93,6 @@ class RTCMV2Writer:
         """
         time_within_hour = time_of_week - 3600 * (int(time_of_week) // 3600)
         return int(round(time_within_hour / 0.6))
-
-    def encode(self, message, time_of_week, add_parities=True):
-        """Encodes the given message into a bytes object.
-
-        Parameters:
-            message (RTCMV2Packet): the message to write
-            time_of_week (int or None): the current GPS time of week.
-                ``None`` means that it is not known, in which case we can
-                encode the message only if its *own* ``modified_z_count``
-                attribute is not ``None``.
-            add_parities (bool): whether to add the parity bits and perform
-                the wire encoding of the message or not. When this parameter
-                is ``False``, the encoding stops at the phase when only the
-                data bits are assembled and the parity bits are not inserted
-                into the bit stream yet.
-
-        Returns:
-            bytes: the encoded message
-        """
-        assert isinstance(message, RTCMV2Packet)
-
-        bits = BitArray()
-        try:
-            message.write_body(bits)
-        except NotImplementedError:
-            raise NotImplementedError(
-                "Unsupported RTCM v2 packet type: " "{0!r}".format(message.packet_type)
-            )
-
-        self._prepend_message_header(bits, message, time_of_week)
-        if add_parities:
-            bits = self._encode_message(bits)
-
-        return bits.tobytes()
-
-    def write(self, message, time_of_week, add_parities=True):
-        """Writes the given message to the stream associated to the writer.
-
-        Parameters:
-            message (RTCMV2Packet): the message to write
-            time_of_week (int or None): the current GPS time of week.
-                ``None`` means that it is not known, in which case we can
-                encode the message only if its *own* ``modified_z_count``
-                attribute is not ``None``.
-            add_parities (bool): whether to add the parity bits and perform
-                the wire encoding of the message or not. When this parameter
-                is ``False``, the encoding stops at the phase when only the
-                data bits are assembled and the parity bits are not inserted
-                into the bit stream yet.
-        """
-        self.fp.write(self.encode(message, time_of_week, add_parities))
-        self.fp.flush()
 
     def _encode_message(self, bits):
         """Given a bit array containing the data bits, returns another bit
@@ -183,7 +169,7 @@ class RTCMV2Writer:
         if time_of_week is None:
             mod_z_count = message.modified_z_count
         else:
-            mod_z_count = self.calculate_modified_z_count(time_of_week)
+            mod_z_count = self._calculate_modified_z_count(time_of_week)
 
         if mod_z_count is None:
             raise ValueError(
@@ -212,3 +198,75 @@ class RTCMV2Writer:
         bits[0:0] = header
         while len(bits) % 24 != 0:
             bits.append("0b10101010")
+
+
+class RTCMV3Encoder:
+    """Encoder that generates byte-level representations of an
+    RTCM V3 message.
+    """
+
+    PREAMBLE = 0xD3
+
+    def encode(self, message: RTCMV3Packet, add_parities: bool = True) -> bytes:
+        """Encodes the given message into a bytes object.
+
+        Parameters:
+            message (RTCMV3Packet): the message to write
+            add_parities (bool): whether to add the parity bits and perform
+                the wire encoding of the message or not. When this parameter is
+                ``False``, the encoding stops at the phase when only the data
+                bits are assembled and the header and then parity bits are not
+                inserted into the bit stream yet.
+
+        Returns:
+            bytes: the encoded message
+        """
+        assert isinstance(message, RTCMV3Packet)
+
+        bits = BitArray()
+
+        try:
+            message.write_body(bits)
+        except (NotImplementedError, AttributeError):
+            if hasattr(message, "bytes"):
+                bits = BitArray(bytes=message.bytes)
+            else:
+                raise NotImplementedError(
+                    f"Unsupported RTCM v3 packet type: {message.packet_type!r}"
+                )
+
+        data = bits.tobytes()
+
+        if add_parities:
+            length = len(data)
+            header = bytes([self.PREAMBLE, length >> 8, length & 0xFF])
+            parity = crc24q(header + data)
+            data = b"".join(
+                [
+                    header,
+                    data,
+                    bytes([parity >> 16, (parity >> 8) & 0xFF, parity & 0xFF]),
+                ]
+            )
+
+        return data
+
+
+def create_rtcm_encoder(format: Union[int, str]) -> Callable[[RTCMPacket], bytes]:
+    """Creates an RTCM encoder function that is suitable to be used in
+    conjunction with the channels from the ``flockwave-conn`` module.
+
+    Parameters:
+        format: the RTCM format that the parser will use; must be one of
+            ``rtcm2`` or ``rtcm3``. 2 and 3 as integers can be used as aliases
+            for ``rtcm2`` and ``rtcm3``.
+
+    Returns:
+        the parser function
+    """
+    if format == "rtcm2" or format == 2:
+        return RTCMV2Encoder().encode
+    elif format == "rtcm3" or format == 3:
+        return RTCMV3Encoder().encode
+    else:
+        raise ValueError(f"unknown RTCM format: {format!r}")
