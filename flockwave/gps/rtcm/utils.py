@@ -1,6 +1,9 @@
 """Helper functions for RTCM message decoding"""
 
-__all__ = ("count_bits",)
+from operator import attrgetter
+from typing import Optional
+
+__all__ = ("count_bits", "get_best_satellites")
 
 # Construct a helper table for the _count_bits function
 _count_bits_table = [0] * 256
@@ -24,3 +27,22 @@ def count_bits(value: int) -> int:
         + _count_bits_table[(value >> 8) & 0xFF]
         + _count_bits_table[(value >> 16) & 0xFF]
     )
+
+
+def get_best_satellites(satellites, count: Optional[int] = None):
+    """Given a list of satellite objects, each of which having a `cnr`
+    attribute containing the carrier-to-noise ratio, returns the ones that
+    have the best carrier-to-noise ratio, in decreasing order.
+
+    Parameters:
+        satellites (List[object]): list of satellites
+        count (Optional[int]): maximum number of satellites to return
+
+    Returns:
+        List[object]: a sorted list of satellites with the best
+            carrier-to-noise ratios
+    """
+    top = sorted(satellites, key=attrgetter("cnr"), reverse=True)
+    if count is not None:
+        top[count:] = []
+    return top

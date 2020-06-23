@@ -203,7 +203,7 @@ class Response:
         """
         return self._protocol
 
-    async def read(self, max_bytes: Optional[int] = None) -> bytes:
+    async def receive_some(self, max_bytes: Optional[int] = None) -> bytes:
         """Reads the given number of bytes from the response.
 
         Parameters:
@@ -239,3 +239,5 @@ class Response:
                 break
 
         return b"".join(result)
+
+    read = receive_some

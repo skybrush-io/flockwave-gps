@@ -14,7 +14,7 @@ from .utils import count_bits
 __all__ = ("RTCMV2Writer",)
 
 
-class RTCMV2Writer(object):
+class RTCMV2Writer:
     """Writer that generates byte-level representations of an
     RTCM V2 message.
 
