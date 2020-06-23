@@ -3,7 +3,7 @@
 from typing import Optional
 
 from .dechunkers import NullDechunker, ResponseDechunker
-from .errors import ResponseError
+from .errors import AccessDeniedError, AuthenticationNeededError, ResponseError
 
 __all__ = ("Response",)
 
@@ -130,7 +130,11 @@ class Response:
 
         self._protocol = parts[0]
         code = parts[1]
-        if code != b"200":
+        if code == b"401":
+            raise AuthenticationNeededError("Authentication needed")
+        elif code == b"403":
+            raise AccessDeniedError("Access denied")
+        elif code != b"200":
             raise ResponseError("Received HTTP response: {0!r}".format(code))
 
         if self._protocol != b"ICY":

@@ -11,3 +11,19 @@ class ResponseError(Error):
     """
 
     pass
+
+
+class AccessDeniedError(ResponseError):
+    """Error thrown by HTTP response objects that indicate that access to a
+    particular resource was denied by the server.
+    """
+
+    pass
+
+
+class AuthenticationNeededError(ResponseError):
+    """Error thrown by HTTP response objects that indicate that authentication
+    will be needed to access a resource.
+    """
+
+    pass

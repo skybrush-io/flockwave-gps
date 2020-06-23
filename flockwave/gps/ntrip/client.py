@@ -1,9 +1,9 @@
 """NTRIP client related classes."""
 
-import base64
 import click
 import sys
 
+from base64 import b64encode
 from dataclasses import dataclass
 from typing import Optional
 from urllib.parse import urlparse
@@ -109,7 +109,7 @@ class NtripClient:
             if "/" in host and mountpoint is None:
                 server, _, mountpoint = host.partition("/")
             conn = NtripClientConnectionInfo(
-                server, port, username, password, mountpoint, version
+                host, port, username, password, mountpoint, version
             )
         return cls(connection_info=conn)
 
@@ -146,11 +146,11 @@ class NtripClient:
             request.add_header("Ntrip-Version", "Ntrip/2.0")
 
         if self.connection_info.username is not None:
-            credentials = base64.encodestring(
-                "{0.username}:{0.password}".format(self.connection_info)
-            )
+            credentials = b64encode(
+                "{0.username}:{0.password}".format(self.connection_info).encode("utf-8")
+            ).decode("ascii")
             credentials = credentials.replace("\n", "")
-            request.add_header("Authorization", "Basic {0}".format(credentials))
+            request.add_header("Authorization", f"Basic {credentials}")
 
         response = await request.send()
         await response.ensure_headers_processed()
