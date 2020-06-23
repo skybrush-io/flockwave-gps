@@ -3,6 +3,7 @@
 from bitstring import pack
 from builtins import chr, range
 from operator import attrgetter
+from typing import Union
 
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
 from flockwave.gps.vectors import ECEFCoordinate
@@ -11,7 +12,7 @@ from .correction import CorrectionData
 from .ephemeris import EphemerisData
 
 
-class RTCMParams(object):
+class RTCMParams:
     """Constants that denote common properties of values stored in RTCM
     packets.
     """
@@ -23,7 +24,7 @@ class RTCMParams(object):
     INVALID_PSEUDORANGE_MARKER = 0x80000
 
 
-class RTCMV2Packet(object):
+class RTCMV2Packet:
     """Data structure for RTCM V2 packets."""
 
     @classmethod
@@ -712,3 +713,7 @@ class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
             "firmware={0.firmware!r}"
             ")>".format(self)
         )
+
+
+#: Type alias for RTCMv2 and RTCMv3 packets
+RTCMPacket = Union[RTCMV2Packet, RTCMV3Packet]

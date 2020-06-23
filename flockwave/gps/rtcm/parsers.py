@@ -4,36 +4,56 @@ from abc import ABCMeta, abstractmethod
 from builtins import bytes, range
 from bitstring import ConstBitStream
 from enum import Enum
+from typing import Callable, Generic, Iterable, Optional, Tuple, TypeVar, Union
+
 from flockwave.gps.crc import crc24q
 
-from .packets import RTCMV2Packet, RTCMV3Packet
+from .errors import ChecksumError
+from .packets import RTCMPacket, RTCMV2Packet, RTCMV3Packet
 
 
-__all__ = ("RTCMV2Parser", "RTCMV3Parser", "RTCMFormatAutodetectingParser")
+__all__ = (
+    "create_rtcm_parser",
+    "RTCMV2Parser",
+    "RTCMV3Parser",
+    "RTCMFormatAutodetectingParser",
+)
 
 
 RTCMV2ParserState = Enum("RTCMV2ParserState", "START LENGTH PAYLOAD")
 RTCMV3ParserState = Enum("RTCMV3ParserState", "START LENGTH PAYLOAD PARITY")
 
-
-class ChecksumError(RuntimeError):
-    """Error thrown by the RTCM V3 parser when a packet was dropped due to
-    a checksum mismatch.
-    """
-
-    def __init__(self, packet, parity):
-        super(RuntimeError, self).__init__(
-            "Dropped packet of length {0} due "
-            "to checksum mismatch".format(len(packet))
-        )
-        self.packet = packet
-        self.parity = parity
+T = TypeVar("T", RTCMV2Packet, RTCMV3Packet)
 
 
-class RTCMParser(metaclass=ABCMeta):
-    """Superclass for RTCM V2 and V3 parsers."""
+class RTCMParser(Generic[T], metaclass=ABCMeta):
+    """Interface specification for RTCM V2 and V3 parsers."""
 
-    def __init__(self, callback=None, max_packet_length=None):
+    @abstractmethod
+    def feed(self, data: bytes) -> Iterable[T]:
+        """Feeds some raw bytes into the RTCM parser.
+
+        Parameters:
+            data: the bytes to feed into the parser
+
+        Returns:
+            whole RTCM packets that have been parsed after the bytes have been
+            forwarded to the parser
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Resets the state of the parser. The default implementation is
+        empty; should be overridden in subclasses.
+        """
+        raise NotImplementedError
+
+
+class RTCMParserBase(Generic[T], RTCMParser[T]):
+    """Base class for RTCM V2 and V3 parsers."""
+
+    def __init__(self, max_packet_length: Optional[int] = None):
         """Constructor.
 
         :param callback: a function to call for each successfully decoded
@@ -46,57 +66,54 @@ class RTCMParser(metaclass=ABCMeta):
             packet.
         :type max_packet_length: int or None
         """
-        self.callback = callback
         self.max_packet_length = max_packet_length
         self.reset()
 
-    def feed(self, data):
-        """Feeds some raw bytes into the RTCM parser.
-
-        :param data: iterable yielding bytes
-        :return: RTCM packets that have been parsed after the
-            bytes have been forwarded to the parser
-        :rtype: generator of RTCMV2Packet or RTCMV3Packet
-        """
+    def feed(self, data: bytes) -> Iterable[T]:
+        result = []
         for byte in data:
             try:
-                packet = self._feed_byte(ord(byte))
+                packet = self._feed_byte(byte)
                 if packet is not None:
-                    yield packet
+                    result.append(packet)
             except ChecksumError as ex:
-                for packet in self._recover_from_checksum_mismatch(
-                    ex.packet, ex.parity
-                ):
-                    yield packet
+                result.extend(
+                    self._recover_from_checksum_mismatch(ex.packet, ex.parity)
+                )
+
+        return result
 
     @abstractmethod
-    def reset(self):
-        """Resets the state of the parser. The default implementation is
-        empty; should be overridden in subclasses.
+    def _feed_byte(self, byte: int) -> Optional[T]:
+        """Feeds a new byte to the parser.
+
+        Returns a parsed packet if the new byte resulted in a full packet, or
+        `None` if no new packet was parsed from the stream by adding the
+        given byte.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def _feed_byte(self, byte):
-        """Feeds a new byte to the parser."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def _recover_from_checksum_mismatch(self, packet, parity):
+    def _recover_from_checksum_mismatch(
+        self, packet: bytearray, parity: bytearray
+    ) -> Iterable[T]:
         """Tries to recover from a checksum-mismatched packet by looking for
         the next preamble byte in the stream and truncating the internal
         packet buffer appropriately.
 
-        :param packet: the body of the last raw packet that resulted in a
-            checksum mismatch
-        :type packet: bytearray
-        :param parity: the parity bytes that resulted in a checksum mismatch
-        :type parity: bytearray
+        Parameters:
+            packet: the body of the last raw packet that resulted in a
+                checksum mismatch
+            parity: the parity bytes that resulted in a checksum mismatch
+
+        Returns:
+            whole RTCM packets that have been parsed during recovering from a
+            checksum error
         """
         raise NotImplementedError
 
 
-class RTCMV2Parser(RTCMParser):
+class RTCMV2Parser(RTCMParserBase[RTCMV2Packet]):
     """Parser that parses RTCM V2 messages from a stream of bytes."""
 
     PREAMBLE = 0x66
@@ -113,22 +130,23 @@ class RTCMV2Parser(RTCMParser):
     def __init__(self, *args, **kwds):
         """Constructor."""
         self._word = 0
-        super(RTCMV2Parser, self).__init__(*args, **kwds)
+        super().__init__(*args, **kwds)
         self._lsb_reversed = [self._reverse_six_lsb(i) for i in range(64)]
 
-    def reset(self):
+    def reset(self) -> None:
         """Resets the state of the parser."""
         self._state = RTCMV2ParserState.START
         self._length = None
         self._num_bits = 0
         self._packet = bytearray()
 
-    def _decode_word(self):
+    def _decode_word(self) -> bool:
         """Decodes a single data word found in ``self._word`` and appends
         the three decoded bytes to ``self._packet``.
 
-        Returns ``True`` if the decoding was successful, ``False`` if there
-        was a checksum error.
+        Returns:
+            ``True`` if the decoding was successful, ``False`` if there was a
+            checksum error.
         """
         word = self._word
         parity = 0
@@ -147,7 +165,7 @@ class RTCMV2Parser(RTCMParser):
         else:
             return False
 
-    def _feed_byte(self, byte):
+    def _feed_byte(self, byte: int) -> Optional[RTCMV2Packet]:
         if byte & 0xC0 != 0x40:
             # Reset the parser if the upper two bits != 01
             self.reset()
@@ -198,19 +216,39 @@ class RTCMV2Parser(RTCMParser):
                 # Checksum error, try recovery.
                 self.reset()
 
-    def _process_packet(self, packet):
+    def _process_packet(self, packet: bytearray) -> RTCMV2Packet:
         """Processes a packet that has passed the parity test.
 
-        :param packet: the raw packet
-        :type packet: bytearray
-        :return: the parsed RTCM V2 packet
-        :rtype: RTCMV2Packet
+        Parameters:
+            packet: the raw packet
+
+        Returns:
+            the parsed RTCM V2 packet
         """
         bitstream = ConstBitStream(packet[1:])
         return RTCMV2Packet.create(bitstream)
 
+    def _recover_from_checksum_mismatch(
+        self, packet: bytearray, parity: bytearray
+    ) -> Iterable[RTCMV2Packet]:
+        """Tries to recover from a checksum-mismatched packet by looking for
+        the next preamble byte in the stream and truncating the internal
+        packet buffer appropriately.
+
+        Parameters:
+            packet: the body of the last raw packet that resulted in a
+                checksum mismatch
+            parity: the parity bytes that resulted in a checksum mismatch
+
+        Returns:
+            whole RTCM packets that have been parsed during recovering from a
+            checksum error
+        """
+        self.reset()
+        return []
+
     @staticmethod
-    def _reverse_six_lsb(byte):
+    def _reverse_six_lsb(byte: int) -> int:
         """Reverses the six least significant bits of the given byte.
         The byte is assumed to be between 0 (inclusive) and 64 (exclusive).
 
@@ -224,31 +262,31 @@ class RTCMV2Parser(RTCMParser):
         return result
 
 
-class RTCMV3Parser(RTCMParser):
+class RTCMV3Parser(RTCMParserBase[RTCMV3Packet]):
     """Parser that parses RTCM V3 messages from a stream of bytes."""
 
     PREAMBLE = 0xD3
 
-    def reset(self):
+    def reset(self) -> None:
         """Resets the state of the parser."""
         self._state = RTCMV3ParserState.START
         self._packet_length = 0
         self._packet = bytearray()
         self._parity = bytearray()
 
-    def _check_parity(self, packet, parity):
+    def _check_parity(self, packet: bytearray, parity: bytearray) -> bool:
         """Checks whether the given packet has the given parity.
 
-        :param packet: the raw packet
-        :type packet: bytearray
-        :param parity: the parity bytes of the packet
-        :type parity: bytearray
-        :return: whether the packet has the given parity
-        :rtype: bool
+        Parameters:
+            packet: the raw packet
+            parity: the parity bytes of the packet
+
+        Returns:
+            whether the packet has the given parity
         """
         return crc24q(packet) == (parity[0] << 16) + (parity[1] << 8) + (parity[2])
 
-    def _feed_byte(self, byte):
+    def _feed_byte(self, byte: int) -> Optional[RTCMV3Packet]:
         if self._state == RTCMV3ParserState.START:
             # Just waiting for the preamble
             if byte != self.PREAMBLE:
@@ -290,27 +328,31 @@ class RTCMV3Parser(RTCMParser):
                     raise ChecksumError(self._packet, self._parity)
         return None
 
-    def _process_packet(self, packet):
+    def _process_packet(self, packet: bytearray) -> RTCMV3Packet:
         """Processes a packet that has passed the parity test.
 
-        :param packet: the raw packet
-        :type packet: bytearray
-        :return: the parsed RTCM V3 packet
-        :rtype: RTCMV3Packet
+        Parameters:
+            packet: the raw packet
+
+        Returns:
+            the parsed RTCM V3 packet
         """
         bitstream = ConstBitStream(packet[3:])
         return RTCMV3Packet.create(bitstream)
 
-    def _recover_from_checksum_mismatch(self, packet, parity):
+    def _recover_from_checksum_mismatch(self, packet: bytearray, parity: bytearray):
         """Tries to recover from a checksum-mismatched packet by looking for
         the next preamble byte in the stream and truncating the internal
         packet buffer appropriately.
 
-        :param packet: the body of the last raw packet that resulted in a
-            checksum mismatch
-        :type packet: bytearray
-        :param parity: the parity bytes that resulted in a checksum mismatch
-        :type parity: bytearray
+        Parameters:
+            packet: the body of the last raw packet that resulted in a
+                checksum mismatch
+            parity: the parity bytes that resulted in a checksum mismatch
+
+        Returns:
+            whole RTCM packets that have been parsed during recovering from a
+            checksum error
         """
         self.reset()
 
@@ -322,7 +364,7 @@ class RTCMV3Parser(RTCMParser):
             return []
 
 
-class RTCMFormatAutodetectingParser(RTCMParser):
+class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
     """RTCM packet parser that attempts to automatically detect the format
     of the incoming bytes and choose from RTCM v2 or v3.
 
@@ -334,9 +376,9 @@ class RTCMFormatAutodetectingParser(RTCMParser):
     def __init__(self, *args, **kwds):
         """Constructor."""
         self._subparsers = [RTCMV2Parser(*args, **kwds), RTCMV3Parser(*args, **kwds)]
-        super(RTCMFormatAutodetectingParser, self).__init__(*args, **kwds)
+        self.reset()
 
-    def reset(self):
+    def reset(self) -> None:
         """Resets the state of the parser. The default implementation is
         empty; should be overridden in subclasses.
         """
@@ -349,38 +391,43 @@ class RTCMFormatAutodetectingParser(RTCMParser):
 
         self._pending_checksum_errors = []
 
-    def feed(self, data):
+    def feed(self, data: bytes) -> Iterable[RTCMPacket]:
         """Feeds some raw bytes into the RTCM parser.
 
-        :param data: iterable yielding bytes
-        :return: RTCM packets that have been parsed after the
-            bytes have been forwarded to the parser
-        :rtype: generator of RTCMV2Packet or RTCMV3Packet
+        Parameters:
+            data: the bytes to feed into the parser
+
+        Returns:
+            whole RTCM packets that have been parsed after the bytes have been
+            forwarded to the parser
         """
+        result = []
+
         for byte in data:
-            self._pending_checksum_errors[:] = []
+            del self._pending_checksum_errors[:]
+
             try:
-                packet = self._feed_byte(ord(byte))
+                packet = self._feed_byte(byte)
                 if packet is not None:
-                    yield packet
+                    result.append(packet)
             except ChecksumError as ex:
                 # We get here if we have already chosen the subparser
                 # and the chosen subparser subsequently throws checksum
                 # errors.
                 recover = self._chosen_subparser._recover_from_checksum_mismatch
-                for packet in recover(ex.packet, ex.parity):
-                    yield packet
+                result.extend(recover(ex.packet, ex.parity))
 
             if self._chosen_subparser is None:
                 # We get here if we have not chosen a subparser yet and
                 # we must handle pending checksum errors
                 packets, parser = self._process_pending_checksum_errors()
                 if packets:
-                    for packet in packets:
-                        yield packet
+                    result.extend(packets)
                     self._chosen_subparser = parser
 
-    def _feed_byte(self, byte):
+        return result
+
+    def _feed_byte(self, byte: int) -> Optional[RTCMPacket]:
         """Feeds a new byte to the parser."""
         if self._chosen_subparser is not None:
             return self._chosen_subparser._feed_byte(byte)
@@ -394,7 +441,9 @@ class RTCMFormatAutodetectingParser(RTCMParser):
                     self._chosen_subparser = parser
                     return result
 
-    def _process_pending_checksum_errors(self):
+    def _process_pending_checksum_errors(
+        self
+    ) -> Tuple[Iterable[RTCMPacket], RTCMParser]:
         """Processes unprocessed checksum errors from subparsers to see
         if any of the recovery attempts yield proper packets. Returns a
         list of the recovered packets, or an empty list if there was
@@ -407,3 +456,27 @@ class RTCMFormatAutodetectingParser(RTCMParser):
             if recovered_packets:
                 return list(recovered_packets), parser
         return [], None
+
+
+def create_rtcm_parser(
+    format: Union[int, str] = "auto"
+) -> Callable[[bytes], Iterable[RTCMPacket]]:
+    """Creates an RTCM parser function that is suitable to be used in
+    conjunction with the channels from the ``flockwave-conn`` module.
+
+    Parameters:
+        format: the RTCM format that the parser will use; must be one of
+            ``rtcmv2``, ``rtcmv3`` or ``auto``. 2 and 3 as integers can be used
+            as aliases for ``rtcmv2`` and ``rtcmv3``.
+
+    Returns:
+        the parser function
+    """
+    if format == "rtcmv2" or format == 2:
+        return RTCMV2Parser().feed
+    elif format == "rtcmv3" or format == 3:
+        return RTCMV3Parser().feed
+    elif format == "auto":
+        return RTCMFormatAutodetectingParser().feed
+    else:
+        raise ValueError(f"unknown RTCM format: {format!r}")

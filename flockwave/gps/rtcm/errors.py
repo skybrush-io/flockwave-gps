@@ -17,9 +17,8 @@ class ChecksumError(Error):
             packet (bytes): the payload of the packet that was dropped
             parity (bytes): the parity bytes of the packet that was dropped
         """
-        super(Error, self).__init__(
-            "Dropped packet of length {0} due to "
-            "checksum mismatch".format(len(packet))
+        super().__init__(
+            f"Dropped packet of length {len(packet)} due to checksum mismatch"
         )
         self.packet = packet
         self.parity = parity
