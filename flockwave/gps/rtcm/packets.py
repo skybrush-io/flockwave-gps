@@ -413,6 +413,12 @@ class RTCMV3GPSSatelliteInfo:
             return self.l1["cnr"]
 
     @property
+    def json(self):
+        """Returns a compact JSON representation of the packet."""
+        keys = ["svid", "l1", "l2"]
+        return { key: getattr(self, key, None) for key in keys }
+
+    @property
     def l1_cnr(self):
         return self.l1["cnr"]
 
@@ -508,6 +514,12 @@ class RTCMV3GLONASSSatelliteInfo:
             return self.l1["cnr"]
 
     @property
+    def json(self):
+        """Returns a compact JSON representation of the packet."""
+        keys = ["svid", "l1", "l2"]
+        return { key: getattr(self, key, None) for key in keys }
+
+    @property
     def l1_cnr(self):
         return self.l1["cnr"]
 
@@ -601,6 +613,14 @@ class RTCMV3GPSRTKPacket(RTCMV3Packet, SatelliteContainerMixin):
                 RTCMV3GPSSatelliteInfo.create(bitstream, is_extended, has_l2)
             )
 
+        return result
+
+    @property
+    def json(self):
+        """Returns a compact JSON representation of the packet."""
+        keys = ["packet_type", "station_id", "tow", "sync", "smoothed", "smoothing_interval"]
+        result = { key: getattr(self, key, None) for key in keys }
+        result["satellites"] = [sat_info.json for sat_info in self.satellites]
         return result
 
     @property
@@ -754,6 +774,14 @@ class RTCMV3GLONASSRTKPacket(RTCMV3Packet, SatelliteContainerMixin):
                 RTCMV3GLONASSSatelliteInfo.create(bitstream, is_extended, has_l2)
             )
 
+        return result
+
+    @property
+    def json(self):
+        """Returns a compact JSON representation of the packet."""
+        keys = ["packet_type", "station_id", "tod", "sync", "smoothed", "smoothing_interval"]
+        result = { key: getattr(self, key, None) for key in keys }
+        result["satellites"] = [sat_info.json for sat_info in self.satellites]
         return result
 
     @property
