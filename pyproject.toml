@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flockwave-gps"
-version = "0.15.1"
+version = "0.16.0"
 description = "GPS and geography related routines and classes"
 authors = ["Tamas Nepusz <tamas@collmot.com>"]
 packages = [
@@ -15,6 +15,7 @@ trio = {version = ">=0.15", optional = true}
 pytest = "^5.4.3"
 coverage = {extras = ["toml"], version = "^5.2"}
 pytest-cov = "^2.10.0"
+black = {version = "^20.8b1", allow-prereleases = true}
 
 [tool.poetry.extras]
 ntrip = ["trio"]
