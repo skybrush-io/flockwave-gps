@@ -1,6 +1,7 @@
 """Classes representing coordinates in various coordinate systems."""
 
 from math import atan2, cos, degrees, radians, sin, sqrt
+from typing import Optional
 
 from .constants import WGS84
 
@@ -9,6 +10,10 @@ __all__ = (
     "FlatEarthCoordinate",
     "FlatEarthToGPSCoordinateTransformation",
     "ECEFToGPSCoordinateTransformation",
+    "PositionXYZ",
+    "Vector3D",
+    "VelocityNED",
+    "VelocityXYZ",
 )
 
 
@@ -44,7 +49,7 @@ class AltitudeMixin(object):
         self._amsl = float(value) if value is not None else None
 
 
-class Vector3D(object):
+class Vector3D:
     """Generic 3D vector."""
 
     @classmethod
@@ -52,13 +57,13 @@ class Vector3D(object):
         """Creates a generic 3D vector from its JSON representation."""
         return cls(x=float(data[0]), y=float(data[1]), z=float(data[2]))
 
-    def __init__(self, x=0.0, y=0.0, z=0.0):
+    def __init__(self, x: float = 0.0, y: float = 0.0, z: float = 0.0):
         """Constructor.
 
         Parameters:
-            x (float): the X coordinate
-            y (float): the Y coordinate
-            z (float): the Z coordinate
+            x: the X coordinate
+            y: the Y coordinate
+            z: the Z coordinate
         """
         self._x, self._y, self._z = 0.0, 0.0, 0.0
         self.x = x
@@ -70,7 +75,7 @@ class Vector3D(object):
         # Don't use keyword arguments below; it would break VelocityNED
         return self.__class__(self.x, self.y, self.z)
 
-    def distance(self, other):
+    def distance(self, other: "Vector3D") -> float:
         """Returns the distance between this position and another 3D
         vector.
         """
@@ -83,30 +88,35 @@ class Vector3D(object):
         else:
             raise TypeError("expected Vector3D, got {0!r}".format(type(other)))
 
-    def round(self, precision):
+    def round(self, precision: int) -> None:
         """Rounds the coordinates of the vector to the given number of
         decimal digits.
 
         Parameters:
-            precision (int): the number of decimal digits to round to
+            precision: the number of decimal digits to round to
         """
         self._x = round(self._x, precision)
         self._y = round(self._y, precision)
         self._z = round(self._z, precision)
 
-    def update(self, x=None, y=None, z=None, precision=None):
+    def update(
+        self,
+        x: Optional[float] = None,
+        y: Optional[float] = None,
+        z: Optional[float] = None,
+        precision: Optional[int] = None,
+    ) -> None:
         """Updates the coordinates of this object.
 
         Parameters:
-            x (Optional[float]): the new X coordinate; ``None`` means to
-                leave the current value intact.
-            y (Optional[float]): the new Y coordinate; ``None`` means to
-                leave the current value intact.
-            z (Optional[float]): the Z coordinate; ``None`` means to
-                leave the current value intact.
-            precision (Optional[int]): the number of decimal digits to
-                round the coordinates to; ``None`` means to take the
-                values as they are
+            x: the new X coordinate; ``None`` means to leave the current value
+                intact.
+            y: the new Y coordinate; ``None`` means to leave the current value
+                intact.
+            z: the new Z coordinate; ``None`` means to leave the current value
+                intact.
+            precision: the number of decimal digits to round the coordinates
+                to; ``None`` means to take the values as they are
         """
         if x is not None:
             self.x = x
@@ -117,15 +127,14 @@ class Vector3D(object):
         if precision is not None:
             self.round(precision)
 
-    def update_from(self, other, precision=None):
+    def update_from(self, other: "Vector3D", precision: Optional[int] = None) -> None:
         """Updates the coordinates of this object from another instance
         of Vector3D_.
 
         Parameters:
-            other (Vector3D): the other object to copy the values from.
-            precision (Optional[int]): the number of decimal digits to
-                round the coordinates to; ``None`` means to take the
-                values as they are
+            other: the other object to copy the values from.
+            precision: the number of decimal digits to round the coordinates to;
+                ``None`` means to take the values as they are
         """
         # Don't use keyword arguments below; it would break VelocityNED
         self.update(other.x, other.y, other.z, precision=precision)
@@ -136,30 +145,30 @@ class Vector3D(object):
         return [self._x, self._y, self._z]
 
     @property
-    def x(self):
+    def x(self) -> float:
         """The X coordinate."""
         return self._x
 
     @x.setter
-    def x(self, value):
+    def x(self, value: float):
         self._x = float(value)
 
     @property
-    def y(self):
+    def y(self) -> float:
         """The Y coordinate."""
         return self._y
 
     @y.setter
-    def y(self, value):
+    def y(self, value: float):
         self._y = float(value)
 
     @property
-    def z(self):
+    def z(self) -> float:
         """The Z coordinate."""
         return self._z
 
     @z.setter
-    def z(self, value):
+    def z(self, value: float):
         self._z = float(value)
 
     def __floordiv__(self, other):
@@ -193,6 +202,52 @@ class Vector3D(object):
         return "{0.__class__.__name__}(x={0.x!r}, y={0.y!r}, z={0.z!r})".format(self)
 
 
+class PositionXYZ(Vector3D):
+    """Standard X-Y-Z position vector.
+
+    The JSON representation of this class is conformant with the Flockwave
+    protocol specification; therefore, the JSON representation stores positions
+    as integers in mm instead of the raw floating-point values.
+    """
+
+    @classmethod
+    def from_json(cls, data):
+        """Creates an XYZ position vector from its JSON representation."""
+        return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
+
+    @Vector3D.json.getter
+    def json(self):
+        """Returns the JSON representation of the coordinate."""
+        return [
+            int(round(self._x * 1e3)),
+            int(round(self._y * 1e3)),
+            int(round(self._z * 1e3)),
+        ]
+
+
+class VelocityXYZ(Vector3D):
+    """Standard X-Y-Z velocity vector.
+
+    The JSON representation of this class is conformant with the Flockwave
+    protocol specification; therefore, the JSON representation stores velocities
+    as integers in mm/s instead of the raw floating-point values.
+    """
+
+    @classmethod
+    def from_json(cls, data):
+        """Creates an XYZ position vector from its JSON representation."""
+        return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
+
+    @Vector3D.json.getter
+    def json(self):
+        """Returns the JSON representation of the coordinate."""
+        return [
+            int(round(self._x * 1e3)),
+            int(round(self._y * 1e3)),
+            int(round(self._z * 1e3)),
+        ]
+
+
 class VelocityNED(Vector3D):
     """NED (North-East-Down) velocity vector.
 
@@ -216,7 +271,7 @@ class VelocityNED(Vector3D):
             east (float): the east coordinate
             down (float): the down coordinate
         """
-        super(VelocityNED, self).__init__(x=north, y=east, z=down)
+        super().__init__(x=north, y=east, z=down)
 
     def update(self, north=None, east=None, down=None, precision=None):
         """Updates the coordinates of this object.
@@ -232,7 +287,7 @@ class VelocityNED(Vector3D):
                 round the coordinates to; ``None`` means to take the
                 values as they are
         """
-        super(VelocityNED, self).update(north, east, down, precision=precision)
+        super().update(north, east, down, precision=precision)
 
     @Vector3D.json.getter
     def json(self):

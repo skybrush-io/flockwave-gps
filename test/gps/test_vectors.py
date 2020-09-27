@@ -7,8 +7,10 @@ from flockwave.gps.vectors import (
     FlatEarthCoordinate,
     FlatEarthToGPSCoordinateTransformation,
     GPSCoordinate,
+    PositionXYZ,
     Vector3D,
     VelocityNED,
+    VelocityXYZ,
 )
 
 import unittest
@@ -27,6 +29,18 @@ class JSONFormatTest(unittest.TestCase):
         self.assertEqual(4, vec.y)
         self.assertEqual(9, vec.z)
 
+    def test_position_xyz_to_json_and_back(self):
+        """Tests whether PositionXYZ instances can be converted into JSON and
+        back.
+        """
+        vec = PositionXYZ(x=1, y=4, z=9)
+        vec = PositionXYZ.from_json(vec.json)
+        self.assertEqual(1, vec.x)
+        self.assertEqual(4, vec.y)
+        self.assertEqual(9, vec.z)
+
+        self.assertEqual(vec.json, [1000, 4000, 9000])
+
     def test_velocity_ned_to_json_and_back(self):
         """Tests whether VelocityNED instances can be converted into JSON and
         back.
@@ -36,6 +50,20 @@ class JSONFormatTest(unittest.TestCase):
         self.assertEqual(1, vec.north)
         self.assertEqual(4, vec.east)
         self.assertEqual(9, vec.down)
+
+        self.assertEqual(vec.json, [1000, 4000, 9000])
+
+    def test_velocity_xyz_to_json_and_back(self):
+        """Tests whether Velocty instances can be converted into JSON and
+        back.
+        """
+        vec = VelocityXYZ(x=1, y=4, z=9)
+        vec = VelocityXYZ.from_json(vec.json)
+        self.assertEqual(1, vec.x)
+        self.assertEqual(4, vec.y)
+        self.assertEqual(9, vec.z)
+
+        self.assertEqual(vec.json, [1000, 4000, 9000])
 
     def test_gps_coordinate_to_json_and_back(self):
         """Tests whether GPSCoordinate instances can be converted into JSON and
