@@ -442,7 +442,7 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
                     return result
 
     def _process_pending_checksum_errors(
-        self
+        self,
     ) -> Tuple[Iterable[RTCMPacket], RTCMParser]:
         """Processes unprocessed checksum errors from subparsers to see
         if any of the recovery attempts yield proper packets. Returns a

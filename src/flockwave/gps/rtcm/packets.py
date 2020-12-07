@@ -344,9 +344,10 @@ class RTCMV3GPSSatelliteInfo:
         result.l1 = {}
         result.l1["code"] = bitstream.read(1).uint
         result.l1["pseudorange"] = cls._transform_pseudorange(bitstream.read(24).uint)
-        result.l1["pseudorange_diff"], result.l1[
-            "pseudorange_valid"
-        ] = cls._transform_pseudorange_diff(bitstream.read(20).int)
+        (
+            result.l1["pseudorange_diff"],
+            result.l1["pseudorange_valid"],
+        ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
         result.l1["lock_time"] = bitstream.read(7).int
         if is_extended:
             result.l1["ambiguity"] = bitstream.read(8).uint
@@ -370,9 +371,10 @@ class RTCMV3GPSSatelliteInfo:
             result.l2["pseudorange"] = cls._transform_pseudorange(
                 bitstream.read(14).int
             )
-            result.l2["pseudorange_diff"], result.l2[
-                "pseudorange_valid"
-            ] = cls._transform_pseudorange_diff(bitstream.read(20).int)
+            (
+                result.l2["pseudorange_diff"],
+                result.l2["pseudorange_valid"],
+            ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
             result.l2["lock_time"] = bitstream.read(7).int
             if is_extended:
                 result.l2["cnr"] = (
@@ -416,7 +418,7 @@ class RTCMV3GPSSatelliteInfo:
     def json(self):
         """Returns a compact JSON representation of the packet."""
         keys = ["svid", "l1", "l2"]
-        return { key: getattr(self, key, None) for key in keys }
+        return {key: getattr(self, key, None) for key in keys}
 
     @property
     def l1_cnr(self):
@@ -468,9 +470,10 @@ class RTCMV3GLONASSSatelliteInfo:
         result.l1["code"] = bitstream.read(1).uint
         result.l1["freq"] = bitstream.read(5).uint
         result.l1["pseudorange"] = cls._transform_pseudorange(bitstream.read(25).uint)
-        result.l1["pseudorange_diff"], result.l1[
-            "pseudorange_valid"
-        ] = cls._transform_pseudorange_diff(bitstream.read(20).int)
+        (
+            result.l1["pseudorange_diff"],
+            result.l1["pseudorange_valid"],
+        ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
         result.l1["lock_time"] = bitstream.read(7).int
         if is_extended or has_l2:
             # According to the gpsd source, GLONASS L1&L2 basic packets
@@ -489,9 +492,10 @@ class RTCMV3GLONASSSatelliteInfo:
             else:
                 result.l2["freq"] = bitstream.read(5).uint
             result.l2["pseudorange"] = cls._transform_rangeincr(bitstream.read(14).uint)
-            result.l2["pseudorange_diff"], result.l2[
-                "pseudorange_valid"
-            ] = cls._transform_pseudorange_diff(bitstream.read(20).int)
+            (
+                result.l2["pseudorange_diff"],
+                result.l2["pseudorange_valid"],
+            ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
             result.l2["lock_time"] = bitstream.read(7).int
             if not is_extended:
                 result.l2["ambiguity"] = bitstream.read(7).uint
@@ -517,7 +521,7 @@ class RTCMV3GLONASSSatelliteInfo:
     def json(self):
         """Returns a compact JSON representation of the packet."""
         keys = ["svid", "l1", "l2"]
-        return { key: getattr(self, key, None) for key in keys }
+        return {key: getattr(self, key, None) for key in keys}
 
     @property
     def l1_cnr(self):
@@ -618,8 +622,15 @@ class RTCMV3GPSRTKPacket(RTCMV3Packet, SatelliteContainerMixin):
     @property
     def json(self):
         """Returns a compact JSON representation of the packet."""
-        keys = ["packet_type", "station_id", "tow", "sync", "smoothed", "smoothing_interval"]
-        result = { key: getattr(self, key, None) for key in keys }
+        keys = [
+            "packet_type",
+            "station_id",
+            "tow",
+            "sync",
+            "smoothed",
+            "smoothing_interval",
+        ]
+        result = {key: getattr(self, key, None) for key in keys}
         result["satellites"] = [sat_info.json for sat_info in self.satellites]
         return result
 
@@ -779,8 +790,15 @@ class RTCMV3GLONASSRTKPacket(RTCMV3Packet, SatelliteContainerMixin):
     @property
     def json(self):
         """Returns a compact JSON representation of the packet."""
-        keys = ["packet_type", "station_id", "tod", "sync", "smoothed", "smoothing_interval"]
-        result = { key: getattr(self, key, None) for key in keys }
+        keys = [
+            "packet_type",
+            "station_id",
+            "tod",
+            "sync",
+            "smoothed",
+            "smoothing_interval",
+        ]
+        result = {key: getattr(self, key, None) for key in keys}
         result["satellites"] = [sat_info.json for sat_info in self.satellites]
         return result
 
