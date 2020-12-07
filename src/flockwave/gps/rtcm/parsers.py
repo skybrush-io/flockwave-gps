@@ -480,3 +480,25 @@ def create_rtcm_parser(
         return RTCMFormatAutodetectingParser().feed
     else:
         raise ValueError(f"unknown RTCM format: {format!r}")
+
+
+def main():
+    import sys
+
+    parser = create_rtcm_parser("rtcm3")
+    with open(sys.argv[1], "rb") as fp:
+        while True:
+            chunk = fp.read(16)
+            if not chunk:
+                break
+
+            for packet in parser(chunk):
+                if hasattr(packet, "json"):
+                    print(packet.json)
+                else:
+                    pass
+                    # print(repr(packet))
+
+
+if __name__ == "__main__":
+    main()

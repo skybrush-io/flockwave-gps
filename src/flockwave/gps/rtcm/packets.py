@@ -22,8 +22,9 @@ class RTCMParams:
     PSEUDORANGE_DIFF_RESOLUTION = 5e-4
     INVALID_PSEUDORANGE_MARKER = 0x80000
     GLONASS_INVALID_RANGEINCR_MARKER = 0x2000
-    PSEUDORANGE_UNIT_GPS = 299792.458
+    PSEUDORANGE_UNIT_GPS = 299792.458  # speed of light, km/s
     PSEUDORANGE_UNIT_GLONASS = 599584.916
+    RANGE_UNIT_MSM = 299792.458  # speed of light, km/s
 
 
 class RTCMV2Packet:
@@ -416,7 +417,7 @@ class RTCMV3GPSSatelliteInfo:
 
     @property
     def json(self):
-        """Returns a compact JSON representation of the packet."""
+        """Returns a compact JSON representation of the object."""
         keys = ["svid", "l1", "l2"]
         return {key: getattr(self, key, None) for key in keys}
 
@@ -442,12 +443,12 @@ class RTCMV3GPSSatelliteInfo:
         if not hasattr(self, "l2"):
             return (
                 "<{0.__class__.__name__}(svid={0.svid!r}, "
-                "l1={0.l1!r}), temp_corrs={0.temp_corrs!r}>".format(self)
+                "l1={0.l1!r}, temp_corrs={0.temp_corrs!r})>".format(self)
             )
         else:
             return (
                 "<{0.__class__.__name__}(svid={0.svid!r}, "
-                "l1={0.l1!r}, l2={0.l2!r}), temp_corrs={0.temp_corrs!r}>".format(self)
+                "l1={0.l1!r}, l2={0.l2!r}, temp_corrs={0.temp_corrs!r})>".format(self)
             )
 
 
@@ -519,7 +520,7 @@ class RTCMV3GLONASSSatelliteInfo:
 
     @property
     def json(self):
-        """Returns a compact JSON representation of the packet."""
+        """Returns a compact JSON representation of the object."""
         keys = ["svid", "l1", "l2"]
         return {key: getattr(self, key, None) for key in keys}
 
@@ -552,13 +553,122 @@ class RTCMV3GLONASSSatelliteInfo:
         if not hasattr(self, "l2"):
             return (
                 "<{0.__class__.__name__}(svid={0.svid!r}, "
-                "l1={0.l1!r}), temp_corrs={0.temp_corrs!r}>".format(self)
+                "l1={0.l1!r}, temp_corrs={0.temp_corrs!r})>".format(self)
             )
         else:
             return (
                 "<{0.__class__.__name__}(svid={0.svid!r}, "
-                "l1={0.l1!r}, l2={0.l2!r}), temp_corrs={0.temp_corrs!r}>".format(self)
+                "l1={0.l1!r}, l2={0.l2!r}, temp_corrs={0.temp_corrs!r})>".format(self)
             )
+
+
+class RTCMV3MSMSatelliteInfo:
+    """Satellite information object for an RTCMV3MSMPacket_ packet."""
+
+    def __init__(self, svid, prefix):
+        self.svid = svid
+        self.id = "{1}{0:02}".format(svid, prefix)
+        self.signals = []
+        self.cnr = None
+
+    @staticmethod
+    def update_satellite_data(objects, bitstream, is_high_resolution=False):
+        """Updates multiple satellite info object with the satellite-related
+        data from a bit stream that is supposed to be part of the body of an
+        RTCMV3MSMPacket_ packet.
+        """
+        for obj in objects:
+            obj.range = bitstream.read("uint:8") * RTCMParams.RANGE_UNIT_MSM
+
+        if is_high_resolution:
+            for obj in objects:
+                obj.extended_info = bitstream.read("uint:4")
+        else:
+            for obj in objects:
+                obj.extended_info = None
+
+        for obj in objects:
+            obj.rng_m = bitstream.read("uint:10")
+
+        if is_high_resolution:
+            for obj in objects:
+                obj.rate = bitstream.read("int:14")
+        else:
+            for obj in objects:
+                obj.rate = None
+
+    @staticmethod
+    def update_signal_data(objects, bitstream, is_high_resolution=False):
+        # TODO(ntamas): store these; see the RTKLIB source code for details
+        # about units and special values etc
+
+        if is_high_resolution:
+            for obj in objects:
+                bitstream.read("int:20")  # pseudorange
+            for obj in objects:
+                bitstream.read("int:24")  # phase range
+            for obj in objects:
+                bitstream.read("uint:10")  # lock time
+        else:
+            for obj in objects:
+                bitstream.read("int:15")  # pseudorange
+            for obj in objects:
+                bitstream.read("int:22")  # phase range
+            for obj in objects:
+                bitstream.read("uint:4")  # lock time
+
+        for obj in objects:
+            bitstream.read("bool")  # half-cycle ambiguity
+
+        if is_high_resolution:
+            for obj in objects:
+                obj["cnr"] = bitstream.read("uint:10") * 0.0625
+            for obj in objects:
+                bitstream.read("int:15")  # phase range rate
+        else:
+            for obj in objects:
+                obj["cnr"] = bitstream.read("uint:6")
+
+    def add_empty_signal_data(self, signal_id):
+        """Adds a placeholder for the data related to the signal with the given
+        ID, to be parsed later from a bistream.
+        """
+        signal_data = {"id": signal_id, "cnr": None}
+        self.signals.append(signal_data)
+        return signal_data
+
+    @property
+    def json(self):
+        """Returns a compact JSON representation of the object."""
+        keys = ["svid", "range", "extended_info", "rng_m", "rate", "cnr", "signals"]
+        return {key: getattr(self, key, None) for key in keys}
+
+    def update_cnr_from_signals(self):
+        """Updates the top-level CNR value from the CNR values of the individual
+        observations by taking the maximum.
+
+        We take the maximum instead of averaging (or some other magic) is because
+        sometimes you have multiple signals for each satellite, but in practice
+        the L1 signal is the most interesting to us for low-cost receivers, and
+        the CNR of the L1 signal is usually the highest.
+        """
+        self.cnr = (
+            max(signal.get("cnr", 0.0) for signal in self.signals)
+            if self.signals
+            else None
+        )
+
+    def __repr__(self):
+        return (
+            "<{0.__class__.__name__}("
+            "svid={0.svid!r}, "
+            "range={0.range!r}, "
+            "rng_m={0.rng_m!r}, "
+            "rate={0.rate!r}, "
+            "cnr={0.cnr!r}, "
+            "signals={0.signals!r}"
+            ")>"
+        ).format(self)
 
 
 class SatelliteContainerMixin:
@@ -986,6 +1096,158 @@ class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
 
 
 # TODO: 1020 -- GLONASS ephemeris
+
+
+@RTCMV3Packet.register(1074, 1077, 1084, 1087, 1094, 1097, 1114, 1117, 1124, 1127)
+class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin):
+    """RTCM v3 MSM (multiple signal message) packet representation.
+
+    This class is used to represent RTCM v3 packets of type 1071 to 1077 (GPS),
+    1081 to 1087 (GLONASS), 1091 to 1097 (Galileo), 1111 to 1117 (QZSS) and
+    1121 to 1127 (BeiDou).
+
+    Currently we have implemented support for packet types ending in 4 and 7
+    only; these two are the most common.
+    """
+
+    @classmethod
+    def create(cls, packet_type, bitstream):
+        """Creates an RTCM v3 GPS MSM packet from the given bit stream.
+
+        Parameters:
+            packet_type (int): the type of the packet (1071 to 1077).
+            bitstream (BitStream): the body of the packet, starting at the
+                station ID
+
+        Returns:
+            RTCMV3GPSRTKPacket: the packet data parsed out of the bitstream
+        """
+        assert packet_type in (
+            1074,
+            1077,
+            1084,
+            1087,
+            1094,
+            1097,
+            1114,
+            1117,
+            1124,
+            1127,
+        )
+
+        is_high_resolution = packet_type % 10 == 7
+
+        result = cls(packet_type)
+
+        result.station_id = bitstream.read(12).uint
+        result.tow = bitstream.read(30).uint * 0.001
+        result.sync = bitstream.read(1).bool
+        result.iod = bitstream.read(3).uint
+
+        result.time_s = bitstream.read(7).uint
+        result.clk_str = bitstream.read(2).uint
+        result.clk_ext = bitstream.read(2).uint
+        result.smoothed = bitstream.read(1).bool
+        result.smoothing_interval = bitstream.read(3).uint
+
+        satellite_mask = bitstream.read(64)
+        satellite_ids = [index + 1 for index, bit in enumerate(satellite_mask) if bit]
+        num_satellites = len(satellite_ids)
+
+        signal_mask = bitstream.read(32)
+        signal_ids = [index + 1 for index, bit in enumerate(signal_mask) if bit]
+        num_signals = len(signal_ids)
+
+        cell_mask_length = num_satellites * num_signals
+        cell_mask = bitstream.read(cell_mask_length)
+
+        if packet_type < 1080:
+            # GPS packet
+            satellite_id_prefix = "G"
+        elif packet_type < 1090:
+            # GLONASS packet
+            satellite_id_prefix = "R"
+        elif packet_type < 1100:
+            # Galileo packet
+            satellite_id_prefix = "E"
+        elif packet_type < 1120:
+            # QZSS packet
+            satellite_id_prefix = "Q"
+        else:
+            # BeiDou packet
+            satellite_id_prefix = "B"
+
+        # Read satellite-specific information first
+        result.satellites = [
+            RTCMV3MSMSatelliteInfo(svid, satellite_id_prefix) for svid in satellite_ids
+        ]
+        RTCMV3MSMSatelliteInfo.update_satellite_data(
+            result.satellites,
+            bitstream,
+            is_high_resolution=is_high_resolution,
+        )
+
+        # Create empty placeholders in the satellite info objects for each cell
+        # (satellite-signal combo)
+        cell_mask_iter = iter(cell_mask)
+        cells_to_signals = []
+        for i in range(num_satellites):
+            for signal_id in signal_ids:
+                bit = next(cell_mask_iter)
+                if bit:
+                    signal_data = result.satellites[i].add_empty_signal_data(
+                        signal_id=signal_id
+                    )
+                    cells_to_signals.append(signal_data)
+
+        # Read signal information for each cell (satellite-signal combo)
+        RTCMV3MSMSatelliteInfo.update_signal_data(
+            cells_to_signals,
+            bitstream,
+            is_high_resolution=is_high_resolution,
+        )
+
+        for satellite in result.satellites:
+            satellite.update_cnr_from_signals()
+
+        return result
+
+    @property
+    def json(self):
+        """Returns a compact JSON representation of the packet."""
+        keys = [
+            "packet_type",
+            "station_id",
+            "tow",
+            "sync",
+            "iod",
+            "time_s",
+            "clk_str",
+            "clk_ext",
+            "smoothed",
+            "smoothing_interval",
+        ]
+        result = {key: getattr(self, key, None) for key in keys}
+        result["satellites"] = [sat_info.json for sat_info in self.satellites]
+        return result
+
+    @property
+    def time_of_week(self):
+        """Alias for ``tow``."""
+        return self.tow
+
+    def __repr__(self):
+        return (
+            "<{0.__class__.__name__}(station_id={0.station_id!r}, "
+            "tow={0.tow!r}, sync={0.sync!r}, iod={0.iod!r}, "
+            "time_s={0.time_s!r}, "
+            "clk_str={0.clk_str!r}, clk_ext={0.clk_ext!r}, "
+            "smoothed={0.smoothed!r}, "
+            "smoothing_interval={0.smoothing_interval!r}, "
+            "satellites={0.satellites!r}"
+            ")>".format(self)
+        )
+
 
 #: Type alias for RTCMv2 and RTCMv3 packets
 RTCMPacket = Union[RTCMV2Packet, RTCMV3Packet]
