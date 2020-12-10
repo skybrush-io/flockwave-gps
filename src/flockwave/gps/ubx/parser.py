@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List
+from typing import Callable, Iterable
 
 from .message import UBXMessage
 from .utils import calculate_ubx_checksum
@@ -33,7 +33,7 @@ class UBXParser:
         self._buffer.clear()
         self._state = UBXParserState.SYNC1
 
-    def feed(self, data: bytes) -> List[UBXMessage]:
+    def feed(self, data: bytes) -> Iterable[UBXMessage]:
         store = self._buffer.append
         result = []
 
@@ -101,3 +101,13 @@ class UBXParser:
                 self.reset()
 
         return result
+
+
+def create_ubx_parser() -> Callable[[bytes], Iterable[UBXMessage]]:
+    """Creates an UBX parser function that is suitable to be used in
+    conjunction with the channels from the ``flockwave-conn`` module.
+
+    Returns:
+        the parser function
+    """
+    return UBXParser().feed
