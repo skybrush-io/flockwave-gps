@@ -5,17 +5,9 @@ from functools import partial
 from typing import Callable
 
 from .enums import UBXClass
+from .utils import calculate_ubx_checksum
 
 __all__ = ("UBX", "UBXMessage")
-
-
-def _calculate_ubx_checksum(data: bytes, offset: int = 2) -> bytes:
-    a, b = 0, 0
-    size = len(data)
-    for i in range(offset, size):
-        a += data[i]
-        b += a
-    return bytes([a & 0xFF, b & 0xFF])
 
 
 @dataclass
@@ -44,7 +36,7 @@ class UBXMessage:
             )
             + self.payload
         )
-        chksum = _calculate_ubx_checksum(header_and_payload)
+        chksum = calculate_ubx_checksum(header_and_payload)
         return header_and_payload + chksum
 
 
