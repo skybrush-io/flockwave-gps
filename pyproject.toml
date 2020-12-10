@@ -11,6 +11,7 @@ packages = [
 python = "^3.7"
 trio = {version = ">=0.15", optional = true}
 bitstring = "^3.1.7"
+pynmea2 = "^1.15.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.4.3"

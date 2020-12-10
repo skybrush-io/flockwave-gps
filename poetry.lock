@@ -307,6 +307,19 @@ url = "https://pypi.collmot.com/simple"
 reference = "collmot"
 
 [[package]]
+name = "pynmea2"
+version = "1.15.0"
+description = "Python library for the NMEA 0183 protcol"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.source]
+type = "legacy"
+url = "https://pypi.collmot.com/simple"
+reference = "collmot"
+
+[[package]]
 name = "pyparsing"
 version = "2.4.7"
 description = "Python parsing module"
@@ -503,7 +516,7 @@ ntrip = ["trio"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "2116050e7df1cfef19f3e5f8378127795777bc9ec00d51e31bb4ee065e16dd16"
+content-hash = "477c37c2115a76b18237d5efd330a82eb231f24162957192fd06e531497c7603"
 
 [metadata.files]
 appdirs = [
@@ -649,6 +662,10 @@ py = [
 pycparser = [
     {file = "pycparser-2.20-py2.py3-none-any.whl", hash = "sha256:7582ad22678f0fcd81102833f60ef8d0e57288b6b5fb00323d101be910e35705"},
     {file = "pycparser-2.20.tar.gz", hash = "sha256:2d475327684562c3a96cc71adf7dc8c4f0565175cf86b6d7a404ff4c771f15f0"},
+]
+pynmea2 = [
+    {file = "pynmea2-1.15.0-py3-none-any.whl", hash = "sha256:fe786594299588d1bfbd346ece2c2c1e5b24e160dcb740813c34bfa70d0a141d"},
+    {file = "pynmea2-1.15.0.tar.gz", hash = "sha256:8b83fa7e3e668af5e182ef1c2fd4a535433ecadf60d7b627280172d695a1646b"},
 ]
 pyparsing = [
     {file = "pyparsing-2.4.7-py2.py3-none-any.whl", hash = "sha256:ef9d7589ef3c200abe66653d3f1ab1033c3c419ae9b9bdb1240a85b024efc88b"},
