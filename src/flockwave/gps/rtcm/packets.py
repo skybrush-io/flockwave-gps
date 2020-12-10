@@ -18,6 +18,7 @@ class RTCMParams:
 
     ANTENNA_POSITION_RESOLUTION = 1e-4
     CARRIER_NOISE_RATIO_UNITS = 0.25
+    CARRIER_NOISE_RATIO_HIRES_UNITS = 0.0625
     PSEUDORANGE_RESOLUTION = 2e-2
     PSEUDORANGE_DIFF_RESOLUTION = 5e-4
     INVALID_PSEUDORANGE_MARKER = 0x80000
@@ -622,7 +623,7 @@ class RTCMV3MSMSatelliteInfo:
 
         if is_high_resolution:
             for obj in objects:
-                obj["cnr"] = bitstream.read("uint:10") * 0.0625
+                obj["cnr"] = bitstream.read("uint:10") * RTCMParams.CARRIER_NOISE_RATIO_HIRES_UNITS
             for obj in objects:
                 bitstream.read("int:15")  # phase range rate
         else:
