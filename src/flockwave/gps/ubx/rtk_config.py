@@ -226,7 +226,6 @@ class UBXRTKBaseConfigurator:
 
         # Read the CFG_TMODE3 settings back for confirmation
         await send(UBX.CFG_TMODE3())
-        print("Configuration finished")
 
 
 def test_rtk_base_configuration() -> None:
