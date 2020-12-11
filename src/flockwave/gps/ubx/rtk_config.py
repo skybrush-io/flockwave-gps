@@ -5,7 +5,7 @@ station (if the GPS is capable enough).
 from typing import Awaitable, Callable
 
 from .encoder import create_ubx_encoder
-from .message import UBX, UBXClass
+from .packet import UBX, UBXClass
 
 __all__ = ("UBXRTKBaseConfigurator",)
 

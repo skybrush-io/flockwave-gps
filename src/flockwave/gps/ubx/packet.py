@@ -7,11 +7,11 @@ from typing import Callable
 from .enums import UBXClass
 from .utils import calculate_ubx_checksum
 
-__all__ = ("UBX", "UBXMessage")
+__all__ = ("UBX", "UBXPacket")
 
 
 @dataclass
-class UBXMessage:
+class UBXPacket:
     """Generic U-blox message type."""
 
     class_id: UBXClass
@@ -58,8 +58,8 @@ _ubx_message_class_and_subclass_map = {
 }
 
 
-class _UBXMessageFactory:
-    """Message factory for UBXMessage_ objects that allow a nicer syntax as
+class _UBXPacketFactory:
+    """Message factory for UBXPacket_ objects that allow a nicer syntax as
     follows:
 
         UBX.CFG_RATE(b"\xe8\x03\x01\x00\x01\x00")
@@ -68,7 +68,7 @@ class _UBXMessageFactory:
     def __init__(self):
         self._factories = {}
 
-    def __getattr__(self, name: str) -> Callable[[bytes], UBXMessage]:
+    def __getattr__(self, name: str) -> Callable[[bytes], UBXPacket]:
         func = self._factories.get(name)
         if func is None:
             try:
@@ -84,8 +84,8 @@ class _UBXMessageFactory:
 
     def _create_message(
         self, class_id: UBXClass, subclass_id: int, data=b""
-    ) -> UBXMessage:
-        return UBXMessage(class_id, subclass_id, bytes(data))
+    ) -> UBXPacket:
+        return UBXPacket(class_id, subclass_id, bytes(data))
 
 
-UBX = _UBXMessageFactory()
+UBX = _UBXPacketFactory()

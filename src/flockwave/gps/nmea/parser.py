@@ -1,6 +1,6 @@
 from typing import Callable, List
 
-from pynmea2 import NMEASentence
+from .packet import NMEAPacket
 
 __all__ = ("create_nmea_parser",)
 
@@ -12,7 +12,7 @@ class NMEAParser:
         self._buffer = []
         self._total = 0
 
-    def feed(self, data: bytes) -> List[NMEASentence]:
+    def feed(self, data: bytes) -> List[NMEAPacket]:
         result = []
 
         while data:
@@ -24,7 +24,7 @@ class NMEAParser:
             if sep:
                 line = b"".join(self._buffer)
                 try:
-                    result.append(NMEASentence.parse(line.decode("ascii")))
+                    result.append(NMEAPacket.parse(line.decode("ascii")))
                 except UnicodeDecodeError:
                     pass
                 except ValueError:
@@ -44,7 +44,7 @@ class NMEAParser:
         self._total = 0
 
 
-def create_nmea_parser() -> Callable[[bytes], NMEASentence]:
+def create_nmea_parser() -> Callable[[bytes], NMEAPacket]:
     """Creates an NMEA-0183 parser function that is suitable to be used in
     conjunction with the channels from the ``flockwave-conn`` module.
 
