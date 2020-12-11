@@ -42,8 +42,10 @@ class UBXMessage:
 
 _ubx_message_class_and_subclass_map = {
     "CFG_PRT": (UBXClass.CFG, 0),
+    "CFG_MSG": (UBXClass.CFG, 1),
     "CFG_RATE": (UBXClass.CFG, 8),
     "CFG_NAV5": (UBXClass.CFG, 0x24),
+    "CFG_TMODE3": (UBXClass.CFG, 0x71),
     "MON_HW": (UBXClass.MON, 9),
     "MON_VER": (UBXClass.MON, 4),
     "NAV_PVT": (UBXClass.NAV, 0x07),
