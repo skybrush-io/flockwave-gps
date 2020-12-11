@@ -167,10 +167,8 @@ class UBXRTKBaseConfigurator:
         await set_message_rate(UBXClass.RTCM3, 254, 0)
 
         # Turn off other unneeded UBX messages
-        await set_message_rate(UBXClass.NAV, 0x07, 0)
-        await set_message_rate(UBXClass.NAV, 0x12, 0)
-        await set_message_rate(UBXClass.RXM, 0x10, 0)
-        await set_message_rate(UBXClass.RXM, 0x11, 0)
+        await set_message_rate(UBXClass.NAV, 0x07, 1)
+        await set_message_rate(UBXClass.NAV, 0x12, 1)
         await set_message_rate(UBXClass.RXM, 0x13, 0)
         await set_message_rate(UBXClass.RXM, 0x15, 0)
         await set_message_rate(UBXClass.MON, 0x09, 0)
@@ -226,7 +224,7 @@ class UBXRTKBaseConfigurator:
         payload += bytes([0] * 8)
         await send(UBX.CFG_TMODE3(payload))
 
-        # Poll survey-in settings for confirmation
+        # Read the CFG_TMODE3 settings back for confirmation
         await send(UBX.CFG_TMODE3())
         print("Configuration finished")
 
@@ -245,7 +243,7 @@ def test_rtk_base_configuration() -> None:
         parser = create_gps_parser()
 
         async with open_nursery() as nursery:
-            config = UBXRTKBaseConfigurator()
+            config = UBXRTKBaseConfigurator(accuracy=10)
             nursery.start_soon(config.run, port.send_all, sleep)
 
             while True:
