@@ -444,12 +444,12 @@ class RTCMV3GPSSatelliteInfo:
         if not hasattr(self, "l2"):
             return (
                 "<{0.__class__.__name__}(svid={0.svid!r}, "
-                "l1={0.l1!r}, temp_corrs={0.temp_corrs!r})>".format(self)
+                "l1={0.l1!r})>".format(self)
             )
         else:
             return (
                 "<{0.__class__.__name__}(svid={0.svid!r}, "
-                "l1={0.l1!r}, l2={0.l2!r}, temp_corrs={0.temp_corrs!r})>".format(self)
+                "l1={0.l1!r}, l2={0.l2!r})>".format(self)
             )
 
 
