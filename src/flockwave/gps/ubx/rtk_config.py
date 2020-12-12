@@ -167,8 +167,8 @@ class UBXRTKBaseConfigurator:
         await set_message_rate(UBXClass.RTCM3, 254, 0)
 
         # Turn off other unneeded UBX messages
-        await set_message_rate(UBXClass.NAV, 0x07, 1)
-        await set_message_rate(UBXClass.NAV, 0x12, 1)
+        await set_message_rate(UBXClass.NAV, 0x07, 0)
+        await set_message_rate(UBXClass.NAV, 0x12, 0)
         await set_message_rate(UBXClass.RXM, 0x13, 0)
         await set_message_rate(UBXClass.RXM, 0x15, 0)
         await set_message_rate(UBXClass.MON, 0x09, 0)
