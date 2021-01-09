@@ -17,12 +17,21 @@ class UBXRTKBaseConfigurator:
     Attributes:
         duration: the minimum survey-in duration, in seconds
         accuracy: the desired survey-in accuracy, in meters
+        use_high_precision: whether to use high-accuracy RTCM messages if
+            the base station supports them; set this to `False` if the base
+            supports high-accuracy MSM messages but the rover does not
     """
 
-    def __init__(self, duration: float = 60, accuracy: float = 0.02):
+    def __init__(
+        self,
+        duration: float = 60,
+        accuracy: float = 0.02,
+        use_high_precision: bool = True,
+    ):
         """Constructor."""
         self.duration = float(duration)
         self.accuracy = float(accuracy)
+        self.use_high_precision = bool(use_high_precision)
 
     async def run(
         self,
@@ -141,27 +150,24 @@ class UBXRTKBaseConfigurator:
         # 130 and on uBlox F9P. We should do autodetection here.
         # TODO(ntamas): find out how to get the firmware revision.
         high_precision_supported = True
+        use_high_precision = high_precision_supported and self.use_high_precision
 
         # GPS MSM message
-        await set_message_rate(UBXClass.RTCM3, 74, 0 if high_precision_supported else 1)
-        await set_message_rate(UBXClass.RTCM3, 77, 1 if high_precision_supported else 0)
+        await set_message_rate(UBXClass.RTCM3, 74, 0 if use_high_precision else 1)
+        await set_message_rate(UBXClass.RTCM3, 77, 1 if use_high_precision else 0)
 
         # GLONASS MSM message
-        await set_message_rate(UBXClass.RTCM3, 84, 0 if high_precision_supported else 1)
-        await set_message_rate(UBXClass.RTCM3, 87, 1 if high_precision_supported else 0)
+        await set_message_rate(UBXClass.RTCM3, 84, 0 if use_high_precision else 1)
+        await set_message_rate(UBXClass.RTCM3, 87, 1 if use_high_precision else 0)
         await set_message_rate(UBXClass.RTCM3, 230, 5)
 
         # Galileo MSM message
-        await set_message_rate(UBXClass.RTCM3, 94, 0 if high_precision_supported else 1)
-        await set_message_rate(UBXClass.RTCM3, 97, 1 if high_precision_supported else 0)
+        await set_message_rate(UBXClass.RTCM3, 94, 0 if use_high_precision else 1)
+        await set_message_rate(UBXClass.RTCM3, 97, 1 if use_high_precision else 0)
 
         # BeiDou MSM message
-        await set_message_rate(
-            UBXClass.RTCM3, 124, 0 if high_precision_supported else 1
-        )
-        await set_message_rate(
-            UBXClass.RTCM3, 127, 1 if high_precision_supported else 0
-        )
+        await set_message_rate(UBXClass.RTCM3, 124, 0 if use_high_precision else 1)
+        await set_message_rate(UBXClass.RTCM3, 127, 1 if use_high_precision else 0)
 
         # No moving baseline messages
         await set_message_rate(UBXClass.RTCM3, 254, 0)
