@@ -22,6 +22,9 @@ __all__ = (
 #: Epoch of GPS time
 GPS_EPOCH = datetime(1980, 1, 6, 0, 0, 0)
 
+#: Offset between the UNIX epoch and the GPS time epoch
+GPS_EPOCH_TO_UNIX_EPOCH = 315964800
+
 #: Dates when leap seconds have occurred since the GPS epoch (1980-01-01)
 #: Consult https://www.timeanddate.com/time/leap-seconds-future.html to keep this
 #: up-to-date
@@ -49,6 +52,9 @@ _LEAP_DATES = (
 #: Datetime objects representing the occurrences of leap seconds since the GPS epoch
 LEAP_DATES = tuple(datetime(i[0], i[1], i[2], 23, 59, 59) for i in _LEAP_DATES)
 
+#: Datetime objects representing the occurrences of leap seconds since the GPS epoch, as UNIX timestamps
+LEAP_UNIX_TIMESTAMPS = tuple(dt.replace(tzinfo=timezone.utc).timestamp() for dt in LEAP_DATES)
+
 #: Number of seconds in a week in GPS time
 SECONDS_IN_WEEK = 604800
 
@@ -70,6 +76,18 @@ def leap_seconds_since_1980(date: datetime) -> int:
     if date.tzinfo is not None:
         date = date.replace(tzinfo=None)
     return bisect(LEAP_DATES, date)
+
+
+def leap_seconds_since_1980_unix(date: float) -> int:
+    """Returns the number of leap seconds since 1980-01-01
+
+    Parameters:
+        date: the time we are interested in, in UTC, as a UNIX timestamp
+
+    Returns:
+        leap seconds up to the given time
+    """
+    return bisect(LEAP_UNIX_TIMESTAMPS, date)
 
 
 def gps_time_to_utc(timestamp: int) -> datetime:
@@ -128,13 +146,9 @@ def datetime_to_gps_time_of_week(dt: datetime) -> Tuple[int, float]:
     return int(week), seconds
 
 
-# TODO(ntamas): conversino between UNIX and GPS time can probably be done better
-# without a conversion to datetime and back
-
 def unix_to_gps_time(seconds: float) -> float:
     """Converts a UNIX timestamp into a GPS timestamp."""
-    dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
-    return datetime_to_gps_time(dt)
+    return seconds - GPS_EPOCH_TO_UNIX_EPOCH + leap_seconds_since_1980_unix(seconds)
 
 
 def unix_to_gps_time_of_week(seconds: float) -> Tuple[int, float]:
