@@ -128,6 +128,9 @@ def datetime_to_gps_time_of_week(dt: datetime) -> Tuple[int, float]:
     return int(week), seconds
 
 
+# TODO(ntamas): conversino between UNIX and GPS time can probably be done better
+# without a conversion to datetime and back
+
 def unix_to_gps_time(seconds: float) -> float:
     """Converts a UNIX timestamp into a GPS timestamp."""
     dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
