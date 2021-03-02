@@ -14,6 +14,8 @@ __all__ = (
     "datetime_to_gps_time_of_week",
     "gps_time_to_utc",
     "gps_time_of_week_to_utc",
+    "unix_to_gps_time",
+    "unix_to_gps_time_of_week",
 )
 
 
@@ -101,9 +103,10 @@ def gps_time_of_week_to_utc(
     return gps_time_to_utc(week * SECONDS_IN_WEEK + seconds)
 
 
-def datetime_to_gps_time(dt: datetime) -> Tuple[int, int]:
+def datetime_to_gps_time(dt: datetime) -> float:
     """Converts a timezone-aware datetime object into a GPS timestamp, expressed
-    as seconds since the GPS epoch."""
+    as seconds since the GPS epoch.
+    """
     if dt.tzinfo is None:
         raise ValueError("not applicable to naive datetime objects")
 
@@ -115,7 +118,7 @@ def datetime_to_gps_time(dt: datetime) -> Tuple[int, int]:
     return (date_before_leaps - GPS_EPOCH).total_seconds()
 
 
-def datetime_to_gps_time_of_week(dt: datetime) -> Tuple[int, int]:
+def datetime_to_gps_time_of_week(dt: datetime) -> Tuple[int, float]:
     """Converts a timezone-aware datetime object into GPS time, expressed
     as the GPS week number and the number of seconds since the beginning of that
     GPS week.
@@ -123,3 +126,20 @@ def datetime_to_gps_time_of_week(dt: datetime) -> Tuple[int, int]:
     seconds = datetime_to_gps_time(dt)
     week, seconds = divmod(seconds, SECONDS_IN_WEEK)
     return int(week), seconds
+
+
+def unix_to_gps_time(seconds: float) -> float:
+    """Converts a UNIX timestamp into a GPS timestamp."""
+    dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
+    return datetime_to_gps_time(dt)
+
+
+def unix_to_gps_time_of_week(seconds: float) -> Tuple[int, float]:
+    """Converts a UNIX timestamp into GPS time, expressed as the GPS week number
+    and the number of seconds since the beginning of that GPS week. Fractional
+    seconds are ignored.
+    """
+    seconds = unix_to_gps_time(seconds)
+    week, seconds = divmod(seconds, SECONDS_IN_WEEK)
+    return int(week), seconds
+

@@ -4,6 +4,7 @@ from flockwave.gps.time import (
     datetime_to_gps_time_of_week,
     gps_time_of_week_to_utc,
     leap_seconds_since_1980,
+    unix_to_gps_time_of_week,
 )
 
 
@@ -38,6 +39,7 @@ def test_leap_seconds_since_1980():
 def test_datetime_to_gps_time_of_week():
     # authoritative source: https://www.gw-openscience.org/gps/
     assert datetime_to_gps_time_of_week(d("2020-10-26 14:28:01")) == (2129, 138499)
+    assert datetime_to_gps_time_of_week(d("2021-03-02 02:53:14")) == (2147, 183212)
 
 
 def test_gps_time_of_week_to_utc():
@@ -45,3 +47,9 @@ def test_gps_time_of_week_to_utc():
     dt = gps_time_of_week_to_utc(138499, week=2129)
     assert f(dt) == "2020-10-26 14:28:01"
     assert dt.tzinfo is not None and dt.utcoffset().total_seconds() == 0
+
+
+def test_unix_to_gps_time_of_week():
+    assert unix_to_gps_time_of_week(1603722481) == (2129, 138499)
+    assert unix_to_gps_time_of_week(1614653594) == (2147, 183212)
+
