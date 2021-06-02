@@ -442,9 +442,8 @@ class RTCMV3GPSSatelliteInfo:
 
     def __repr__(self):
         if not hasattr(self, "l2"):
-            return (
-                "<{0.__class__.__name__}(svid={0.svid!r}, "
-                "l1={0.l1!r})>".format(self)
+            return "<{0.__class__.__name__}(svid={0.svid!r}, " "l1={0.l1!r})>".format(
+                self
             )
         else:
             return (
@@ -623,7 +622,10 @@ class RTCMV3MSMSatelliteInfo:
 
         if is_high_resolution:
             for obj in objects:
-                obj["cnr"] = bitstream.read("uint:10") * RTCMParams.CARRIER_NOISE_RATIO_HIRES_UNITS
+                obj["cnr"] = (
+                    bitstream.read("uint:10")
+                    * RTCMParams.CARRIER_NOISE_RATIO_HIRES_UNITS
+                )
             for obj in objects:
                 bitstream.read("int:15")  # phase range rate
         else:
@@ -1176,7 +1178,7 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin):
             satellite_id_prefix = "Q"
         else:
             # BeiDou packet
-            satellite_id_prefix = "B"
+            satellite_id_prefix = "C"
 
         # Read satellite-specific information first
         result.satellites = [
