@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flockwave-gps"
-version = "1.4.0"
+version = "1.4.1"
 description = "GPS and geography related routines and classes"
 authors = ["Tamas Nepusz <tamas@collmot.com>"]
 packages = [
