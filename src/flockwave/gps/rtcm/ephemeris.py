@@ -125,7 +125,7 @@ class EphemerisData(_EphemerisData):
         if time_of_flight != 0:
             omega_e_dot = 7.292115e-5
             alpha = time_of_flight * omega_e_dot
-            pos = pos._replace(
+            pos = pos.update(
                 x=pos.x * cos(alpha) + pos.y * sin(alpha),
                 y=pos.y * cos(alpha) - pos.x * sin(alpha),
             )

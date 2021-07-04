@@ -10,12 +10,12 @@ class ChecksumError(Error):
     a checksum mismatch.
     """
 
-    def __init__(self, packet, parity):
+    def __init__(self, packet: bytearray, parity: bytearray):
         """Constructor.
 
         Parameters:
-            packet (bytes): the payload of the packet that was dropped
-            parity (bytes): the parity bytes of the packet that was dropped
+            packet: the payload of the packet that was dropped
+            parity: the parity bytes of the packet that was dropped
         """
         super().__init__(
             f"Dropped packet of length {len(packet)} due to checksum mismatch"

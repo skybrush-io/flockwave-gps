@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, Iterable, List
 
 from .packet import NMEAPacket
 
@@ -8,12 +8,15 @@ __all__ = ("create_nmea_parser",)
 class NMEAParser:
     """NMEA-0183 sentence parser."""
 
+    _buffer: List[bytes]
+    _total: int
+
     def __init__(self):
         self._buffer = []
         self._total = 0
 
     def feed(self, data: bytes) -> List[NMEAPacket]:
-        result = []
+        result: List[NMEAPacket] = []
 
         while data:
             pre, sep, data = data.partition(b"\n")
@@ -39,12 +42,12 @@ class NMEAParser:
 
         return result
 
-    def reset(self):
+    def reset(self) -> None:
         self._buffer.clear()
         self._total = 0
 
 
-def create_nmea_parser() -> Callable[[bytes], NMEAPacket]:
+def create_nmea_parser() -> Callable[[bytes], Iterable[NMEAPacket]]:
     """Creates an NMEA-0183 parser function that is suitable to be used in
     conjunction with the channels from the ``flockwave-conn`` module.
 

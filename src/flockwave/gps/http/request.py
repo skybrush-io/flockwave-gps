@@ -1,8 +1,7 @@
 """Simple HTTP request object for the low-level HTTP library."""
 
-from collections import OrderedDict
 from io import BytesIO
-from typing import Dict, Optional
+from typing import Dict, Optional, OrderedDict
 from urllib.parse import quote, urlparse
 
 from .response import Response
@@ -12,6 +11,9 @@ __all__ = ("Request",)
 
 class Request:
     """HTTP request object."""
+
+    data: Optional[bytes]
+    headers: OrderedDict[str, bytes]
 
     def __init__(
         self, url: bytes, data: Optional[bytes] = None, headers: Dict[str, bytes] = None
@@ -71,11 +73,13 @@ class Request:
 
         if not self.has_header("Host"):
             if parts.port and parts.port != 80:
-                self.add_header("Host", "{0.hostname}:{0.port}".format(parts))
+                self.add_header(
+                    "Host", "{0.hostname}:{0.port}".format(parts).encode("ascii")
+                )
             else:
-                self.add_header("Host", "{0.hostname}".format(parts))
+                self.add_header("Host", "{0.hostname}".format(parts).encode("ascii"))
         if not self.has_header("Connection"):
-            self.add_header("Connection", "close")
+            self.add_header("Connection", b"close")
 
         request = BytesIO()
         request.write(
@@ -83,11 +87,10 @@ class Request:
         )
         for header, value in self.headers.items():
             header = header.encode("ascii")
-            if header == "User-agent":
+            if header == b"User-agent":
                 # Some buggy NTRIP servers don't recognize User-agent so we
                 # spell it like this
-                header = "User-Agent"
-            value = value.encode("ascii")
+                header = b"User-Agent"
             request.write(header)
             request.write(b": ")
             request.write(value)

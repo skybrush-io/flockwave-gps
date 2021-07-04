@@ -1,8 +1,9 @@
 """Simple HTTP response object for the low-level HTTP library."""
 
-from typing import Optional
+from trio.abc import ReceiveStream
+from typing import Dict, Generator, Optional
 
-from .dechunkers import NullDechunker, ResponseDechunker
+from .dechunkers import Dechunker, NullDechunker, ResponseDechunker
 from .errors import AccessDeniedError, AuthenticationNeededError, ResponseError
 
 __all__ = ("Response",)
@@ -13,14 +14,20 @@ class LineReader:
     out of it.
     """
 
-    def __init__(self, stream, max_line_length: int = 16384):
+    stream: ReceiveStream
+    _buffer: bytearray
+    _line_generator: Generator[Optional[bytes], Optional[bytes], None]
+
+    def __init__(self, stream: ReceiveStream, max_line_length: int = 16384):
         self.stream = stream
 
         self._buffer = bytearray()
         self._line_generator = self.generate_lines(max_line_length, self._buffer)
 
     @staticmethod
-    def generate_lines(max_line_length, buffer):
+    def generate_lines(
+        max_line_length: int, buffer: bytearray
+    ) -> Generator[Optional[bytes], Optional[bytes], None]:
         buf = buffer or bytearray()
         find_start = 0
         while True:
@@ -49,7 +56,7 @@ class LineReader:
         self._line_generator.close()
         return bytes(self._buffer)
 
-    async def readline(self):
+    async def readline(self) -> bytes:
         line = next(self._line_generator)
         while line is None:
             more_data = await self.stream.receive_some(1024)
@@ -59,12 +66,15 @@ class LineReader:
         return line
 
 
-class PushbackStreamWrapper:
+class PushbackStreamWrapper(ReceiveStream):
     """Trio stream that allows us to push some data in front of the "real"
     stream.
     """
 
-    def __init__(self, stream):
+    _remainder: bytearray
+    _stream: ReceiveStream
+
+    def __init__(self, stream: ReceiveStream):
         """Constructor.
 
         Parameters:
@@ -89,7 +99,7 @@ class PushbackStreamWrapper:
             del self._remainder[:to_return]
             return result
 
-        return await self._stream.receive_some(max_bytes)
+        return await self._stream.receive_some(max_bytes)  # type: ignore
 
 
 class Response:
@@ -97,7 +107,13 @@ class Response:
     skips over the headers and de-chunks chunked responses automatically.
     """
 
-    def __init__(self, stream):
+    _stream: ReceiveStream
+    _headers: Optional[Dict[str, bytes]]
+    _protocol: Optional[bytes]
+    _dechunker: Optional[Dechunker]
+    _line_reader: LineReader
+
+    def __init__(self, stream: ReceiveStream):
         """Constructor.
 
         Parameters:
@@ -150,13 +166,13 @@ class Response:
                         "Found invalid HTTP header line: {0!r}".format(line)
                     )
 
-                self._headers[key.capitalize()] = value.lstrip()
+                self._headers[key.decode("ascii").capitalize()] = value.lstrip()
 
         self._stream = PushbackStreamWrapper(self._stream)
         self._stream.push_back(self._line_reader.get_remainder())
 
     def _process_headers(self):
-        if self.getheader("Transfer-Encoding") == "chunked":
+        if self.getheader("Transfer-Encoding") == b"chunked":
             self._dechunker = ResponseDechunker()
         else:
             self._dechunker = NullDechunker()
@@ -180,20 +196,22 @@ class Response:
         Use `ensure_headers_processed()` if you want to make sure that the
         headers are already processed.
         """
+        assert self._headers is not None, "Headers are not processed yet"
         return self._headers.get(header.capitalize(), default)
 
     @property
-    def headers(self):
+    def headers(self) -> Dict[str, bytes]:
         """Returns a dictionary containing the response headers,
         assuming that the headers are already processed.
 
         Use `ensure_headers_processed()` if you want to make sure that the
         headers are already processed.
         """
+        assert self._headers is not None, "Headers are not processed yet"
         return self._headers
 
     @property
-    def protocol(self):
+    def protocol(self) -> bytes:
         """Returns the protocol string found in the response; typically
         ``HTTP/1.0`` or ``HTTP/1.1``, but it may also be ``ICY`` for NTRIP
         caster v1 servers for instance.
@@ -201,6 +219,7 @@ class Response:
         Use `ensure_headers_processed()` if you want to make sure that the
         headers are already processed.
         """
+        assert self._protocol is not None, "Headers are not processed yet"
         return self._protocol
 
     async def receive_some(self, max_bytes: Optional[int] = None) -> bytes:

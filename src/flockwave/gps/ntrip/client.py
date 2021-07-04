@@ -4,7 +4,7 @@ import click
 import sys
 
 from base64 import b64encode
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -102,18 +102,18 @@ class NtripClient:
             if version is not None:
                 updates["version"] = version
             if updates:
-                conn = conn._replace(**updates)
+                conn = replace(conn, **updates)
         else:
             if version is None:
                 version = 2
             if "/" in host and mountpoint is None:
-                server, _, mountpoint = host.partition("/")
+                host, _, mountpoint = host.partition("/")
             conn = NtripClientConnectionInfo(
                 host, port, username, password, mountpoint, version
             )
         return cls(connection_info=conn)
 
-    def __init__(self, connection_info: Optional[NtripClientConnectionInfo] = None):
+    def __init__(self, connection_info: NtripClientConnectionInfo):
         """Constructor.
 
         In most cases, it is easier to use the ``create()`` class method.
@@ -140,17 +140,17 @@ class NtripClient:
         url = self._url_for_mountpoint(mountpoint)
 
         request = Request(url)
-        request.add_header("Accept", "*/*")
-        request.add_header("User-Agent", "NTRIP NtripClientPOSIX/1.50")
+        request.add_header("Accept", b"*/*")
+        request.add_header("User-Agent", b"NTRIP NtripClientPOSIX/1.50")
         if self.connection_info.version == 2:
-            request.add_header("Ntrip-Version", "Ntrip/2.0")
+            request.add_header("Ntrip-Version", b"Ntrip/2.0")
 
         if self.connection_info.username is not None:
             credentials = b64encode(
                 "{0.username}:{0.password}".format(self.connection_info).encode("utf-8")
-            ).decode("ascii")
-            credentials = credentials.replace("\n", "")
-            request.add_header("Authorization", f"Basic {credentials}")
+            )
+            credentials = credentials.replace(b"\n", b"")
+            request.add_header("Authorization", b"Basic " + credentials)
 
         response = await request.send()
         await response.ensure_headers_processed()
@@ -170,7 +170,7 @@ class NtripClient:
                 "expected Content-type: gnss/data, got {0!r}".format(observed_value)
             )
 
-    def _url_for_mountpoint(self, mountpoint: Optional[str] = None) -> str:
+    def _url_for_mountpoint(self, mountpoint: Optional[str] = None) -> bytes:
         """Returns the URL of the given mountpoint.
 
         Parameters:
@@ -182,7 +182,9 @@ class NtripClient:
             the URL of the given mountpoint
         """
         mountpoint = mountpoint or self.connection_info.mountpoint
-        return f"http://{self.connection_info.host}:{self.connection_info.port}/{mountpoint}"
+        return f"http://{self.connection_info.host}:{self.connection_info.port}/{mountpoint}".encode(
+            "ascii"
+        )
 
 
 @click.command()

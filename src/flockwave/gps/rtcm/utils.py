@@ -1,7 +1,7 @@
 """Helper functions for RTCM message decoding"""
 
 from operator import attrgetter
-from typing import Optional
+from typing import Any, Iterable, List, Optional
 
 __all__ = ("count_bits", "get_best_satellites")
 
@@ -29,7 +29,9 @@ def count_bits(value: int) -> int:
     )
 
 
-def get_best_satellites(satellites, count: Optional[int] = None):
+def get_best_satellites(
+    satellites: Iterable[Any], count: Optional[int] = None
+) -> List[Any]:
     """Given a list of satellite objects, each of which having a `cnr`
     attribute containing the carrier-to-noise ratio, returns the ones that
     have the best carrier-to-noise ratio, in decreasing order.

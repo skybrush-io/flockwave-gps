@@ -107,9 +107,7 @@ class RTCMV2Encoder:
             BitArray: the encoded bits
         """
         if len(bits) % 24 != 0:
-            raise ValueError(
-                "bit array length must be divisible by 24 at " "this point"
-            )
+            raise ValueError("bit array length must be divisible by 24 at this point")
 
         # Okay, this is crazy. First we append six parity bits to every data
         # word. Each data word consists of 24 bits. The parity algorithm is
@@ -226,7 +224,7 @@ class RTCMV3Encoder:
         bits = BitArray()
 
         try:
-            message.write_body(bits)
+            message.write_body(bits)  # type: ignore
         except (NotImplementedError, AttributeError):
             if hasattr(message, "bytes"):
                 bits = BitArray(bytes=message.bytes)
