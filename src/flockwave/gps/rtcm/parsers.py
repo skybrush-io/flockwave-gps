@@ -483,10 +483,15 @@ def create_rtcm_parser(
 
 
 def main():
+    from contextlib import ExitStack
     import sys
 
     parser = create_rtcm_parser("rtcm3")
-    with open(sys.argv[1], "rb") as fp:
+    with ExitStack() as stack:
+        if len(sys.argv) > 1:
+            fp = stack.enter_context(open(sys.argv[1]))
+        else:
+            fp = sys.stdin.buffer
         while True:
             chunk = fp.read(16)
             if not chunk:
