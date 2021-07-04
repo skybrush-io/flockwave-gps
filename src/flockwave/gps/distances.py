@@ -1,21 +1,23 @@
 """Distance calculation routines."""
 
 from math import asin, cos, radians, sin, sqrt
+
 from .constants import WGS84
+from .vectors import GPSCoordinate
 
 __all__ = ("haversine",)
 
 
-def haversine(first, second, datum=WGS84):
+def haversine(first: GPSCoordinate, second: GPSCoordinate, datum=WGS84) -> float:
     """Returns the distance of two points given in spherical coordinates
     (latitude and longitude) using the Haversine formula.
 
     Parameters:
-        first (GPSCoordinate): the first point
-        second (GPSCoordinate): the second point
+        first: the first point
+        second: the second point
 
     Returns:
-        float: the distance of the two points, in metres
+        the distance of the two points, in metres
     """
     first_lat = radians(first.lat)
     second_lat = radians(second.lat)

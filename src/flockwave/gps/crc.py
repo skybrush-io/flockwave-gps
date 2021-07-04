@@ -263,16 +263,15 @@ _crc24q_table = [
 ]
 
 
-def crc24q(array, init=0):
+def crc24q(array: bytes, init: int = 0) -> int:
     """Calculates the CRC24Q checksum of the given byte array.
 
     Parameters:
-        array (bytes): the byte array to run the calculation on
-        init (int): initial value of the checksum; helpful for incremental
-            calculations
+        array: the byte array to run the calculation on
+        init: initial value of the checksum; helpful for incremental calculations
 
     Returns:
-        int: the CRC24Q checksum of the byte array
+        the CRC24Q checksum of the byte array
     """
     global _crc24q_table
     crc = init

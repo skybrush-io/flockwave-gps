@@ -1,7 +1,9 @@
 """Classes representing coordinates in various coordinate systems."""
 
+from __future__ import annotations
+
 from math import atan2, cos, degrees, radians, sin, sqrt
-from typing import Optional
+from typing import List, Optional, Tuple, TypeVar
 
 from .constants import WGS84
 
@@ -15,6 +17,10 @@ __all__ = (
     "VelocityNED",
     "VelocityXYZ",
 )
+
+C = TypeVar("C", bound="Vector3D")
+C2 = TypeVar("C2", bound="GPSCoordinate")
+C3 = TypeVar("C3", bound="FlatEarthCoordinate")
 
 
 class AltitudeMixin(object):
@@ -52,6 +58,10 @@ class AltitudeMixin(object):
 class Vector3D:
     """Generic 3D vector."""
 
+    _x: float
+    _y: float
+    _z: float
+
     @classmethod
     def from_json(cls, data):
         """Creates a generic 3D vector from its JSON representation."""
@@ -70,12 +80,12 @@ class Vector3D:
         self.y = y
         self.z = z
 
-    def copy(self):
+    def copy(self: C) -> C:
         """Creates a copy of this vector."""
         # Don't use keyword arguments below; it would break VelocityNED
         return self.__class__(self.x, self.y, self.z)
 
-    def distance(self, other: "Vector3D") -> float:
+    def distance(self, other: Vector3D) -> float:
         """Returns the distance between this position and another 3D
         vector.
         """
@@ -127,7 +137,7 @@ class Vector3D:
         if precision is not None:
             self.round(precision)
 
-    def update_from(self, other: "Vector3D", precision: Optional[int] = None) -> None:
+    def update_from(self, other: Vector3D, precision: Optional[int] = None) -> None:
         """Updates the coordinates of this object from another instance
         of Vector3D_.
 
@@ -140,7 +150,7 @@ class Vector3D:
         self.update(other.x, other.y, other.z, precision=precision)
 
     @property
-    def json(self):
+    def json(self) -> List[float]:
         """Returns the JSON representation of the coordinate."""
         return [self._x, self._y, self._z]
 
@@ -171,34 +181,34 @@ class Vector3D:
     def z(self, value: float):
         self._z = float(value)
 
-    def __floordiv__(self, other):
+    def __floordiv__(self: C, other: float) -> C:
         # Don't use keyword arguments below; it would break VelocityNED
         return self.__class__(self._x // other, self._y // other, self._z // other)
 
-    def __ifloordiv__(self, other):
+    def __ifloordiv__(self, other: float) -> None:
         self._x //= other
         self._y //= other
         self._z //= other
 
-    def __imul__(self, other):
+    def __imul__(self, other: float) -> None:
         self._x *= other
         self._y *= other
         self._z *= other
 
-    def __itruediv__(self, other):
+    def __itruediv__(self, other: float) -> None:
         self._x /= other
         self._y /= other
         self._z /= other
 
-    def __truediv__(self, other):
+    def __truediv__(self: C, other: float) -> C:
         # Don't use keyword arguments below; it would break VelocityNED
         return self.__class__(self.x / other, self.y / other, self.z / other)
 
-    def __mul__(self, other):
+    def __mul__(self: C, other: float) -> C:
         # Don't use keyword arguments below; it would break VelocityNED
         return self.__class__(self.x * other, self.y * other, self.z * other)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{0.__class__.__name__}(x={0.x!r}, y={0.y!r}, z={0.z!r})".format(self)
 
 
@@ -211,12 +221,12 @@ class PositionXYZ(Vector3D):
     """
 
     @classmethod
-    def from_json(cls, data):
+    def from_json(cls, data: List[float]):
         """Creates an XYZ position vector from its JSON representation."""
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
     @Vector3D.json.getter
-    def json(self):
+    def json(self) -> List[int]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -234,12 +244,12 @@ class VelocityXYZ(Vector3D):
     """
 
     @classmethod
-    def from_json(cls, data):
+    def from_json(cls, data: List[float]):
         """Creates an XYZ position vector from its JSON representation."""
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
     @Vector3D.json.getter
-    def json(self):
+    def json(self) -> List[int]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -259,38 +269,45 @@ class VelocityNED(Vector3D):
     """
 
     @classmethod
-    def from_json(cls, data):
+    def from_json(cls, data: List[float]):
         """Creates a NED velocity vector from its JSON representation."""
         return cls(north=data[0] * 1e-3, east=data[1] * 1e-3, down=data[2] * 1e-3)
 
-    def __init__(self, north=0.0, east=0.0, down=0.0, **kwds):
+    def __init__(
+        self, north: float = 0.0, east: float = 0.0, down: float = 0.0, **kwds
+    ):
         """Constructor.
 
         Parameters:
-            north (float): the north coordinate
-            east (float): the east coordinate
-            down (float): the down coordinate
+            north: the north coordinate
+            east: the east coordinate
+            down: the down coordinate
         """
         super().__init__(x=north, y=east, z=down)
 
-    def update(self, north=None, east=None, down=None, precision=None):
+    def update(
+        self,
+        north: Optional[float] = None,
+        east: Optional[float] = None,
+        down: Optional[float] = None,
+        precision: Optional[int] = None,
+    ) -> None:
         """Updates the coordinates of this object.
 
         Parameters:
-            north (Optional[float]): the new north coordinate; ``None``
-                means to leave the current value intact.
-            east (Optional[float]): the new east coordinate; ``None`` means
-                to leave the current value intact.
-            down (Optional[float]): the down coordinate; ``None`` means to
-                leave the current value intact.
-            precision (Optional[int]): the number of decimal digits to
-                round the coordinates to; ``None`` means to take the
-                values as they are
+            north: the new north coordinate; ``None`` means to leave the current
+                value intact.
+            east: the new east coordinate; ``None`` means to leave the current
+                value intact.
+            down: the down coordinate; ``None`` means to leave the current value
+                intact.
+            precision: the number of decimal digits to round the coordinates
+                to; ``None`` means to take the values as they are
         """
         super().update(north, east, down, precision=precision)
 
     @Vector3D.json.getter
-    def json(self):
+    def json(self) -> List[int]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -299,33 +316,33 @@ class VelocityNED(Vector3D):
         ]
 
     @property
-    def north(self):
+    def north(self) -> float:
         """The north coordinate."""
         return self.x
 
     @north.setter
-    def north(self, value):
+    def north(self, value: float) -> None:
         self.x = value
 
     @property
-    def east(self):
+    def east(self) -> float:
         """The east coordinate."""
         return self.y
 
     @east.setter
-    def east(self, value):
+    def east(self, value: float) -> None:
         self.y = value
 
     @property
-    def down(self):
+    def down(self) -> float:
         """The down coordinate."""
         return self.z
 
     @down.setter
-    def down(self, value):
+    def down(self, value: float) -> None:
         self.z = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "{0.__class__.__name__}(north={0.north!r}, east={0.east!r},"
             " down={0.down!r})".format(self)
@@ -345,6 +362,9 @@ class GPSCoordinate(AltitudeMixin):
     and relative or MSL altitude.
     """
 
+    _lat: float
+    _lon: float
+
     @classmethod
     def from_json(cls, data):
         """Creates a GPS coordinate from its JSON representation."""
@@ -356,23 +376,27 @@ class GPSCoordinate(AltitudeMixin):
             agl=data[3] * 1e-3 if length > 3 and data[3] is not None else None,
         )
 
-    def __init__(self, lat=0.0, lon=0.0, amsl=None, agl=None):
+    def __init__(
+        self,
+        lat: float = 0.0,
+        lon: float = 0.0,
+        amsl: Optional[float] = None,
+        agl: Optional[float] = None,
+    ):
         """Constructor.
 
         Parameters:
-            lat (float): the latitude
-            lon (float): the longitude
-            amsl (Optional[float]): the altitude above mean sea level,
-                if known
-            agl (Optional[float]): the altitude above ground level, if
-                known
+            lat: the latitude
+            lon: the longitude
+            amsl: the altitude above mean sea level, if known
+            agl: the altitude above ground level, if known
         """
         AltitudeMixin.__init__(self, amsl=amsl, agl=agl)
         self._lat, self._lon = 0.0, 0.0
         self.lat = float(lat)
         self.lon = float(lon)
 
-    def copy(self):
+    def copy(self: C2) -> C2:
         """Returns a copy of the current GPS coordinate object."""
         return self.__class__(lat=self.lat, lon=self.lon, amsl=self.amsl, agl=self.agl)
 
@@ -387,48 +411,52 @@ class GPSCoordinate(AltitudeMixin):
         ]
 
     @property
-    def lat(self):
+    def lat(self) -> float:
         """The latitude of the coordinate."""
         return self._lat
 
     @lat.setter
-    def lat(self, value):
+    def lat(self, value: float) -> None:
         self._lat = float(value)
 
     @property
-    def lon(self):
+    def lon(self) -> float:
         """The longitude of the coordinate."""
         return self._lon
 
     @lon.setter
-    def lon(self, value):
+    def lon(self, value: float) -> None:
         self._lon = float(value)
 
-    def round(self, precision):
+    def round(self, precision: int) -> None:
         """Rounds the latitude and longitude of the position to the given
         number of decimal digits. Altitude is left intact.
 
         Parameters:
-            precision (int): the number of decimal digits to round to
+            precision: the number of decimal digits to round to
         """
         self._lat = round(self._lat, precision)
         self._lon = round(self._lon, precision)
 
-    def update(self, lat=None, lon=None, amsl=None, agl=None, precision=None):
+    def update(
+        self,
+        lat: Optional[float] = None,
+        lon: Optional[float] = None,
+        amsl: Optional[float] = None,
+        agl: Optional[float] = None,
+        precision: Optional[int] = None,
+    ) -> None:
         """Updates the coordinates of this object.
 
         Parameters:
-            lat (Optional[float]): the new latitude; ``None`` means to
-                leave the current value intact.
-            lon (Optional[float]): the new longitude; ``None`` means to
-                leave the current value intact.
-            amsl (Optional[float]): the new altitude above mean sea level;
-                ``None`` means to leave the current value intact.
-            agl (Optional[float]): the new altitude above ground level;
-                ``None`` means to leave the current value intact.
-            precision (Optional[int]): the number of decimal digits to
-                round the latitude and longitude to; ``None`` means to take
-                the values as they are
+            lat: the new latitude; `None` means to leave the current value intact.
+            lon: the new longitude; `None` means to leave the current value intact.
+            amsl: the new altitude above mean sea level; `None` means to leave
+                the current value intact.
+            agl: the new altitude above ground level; `None` means to leave the
+                current value intact.
+            precision: the number of decimal digits to round the latitude and
+                longitude to; ``None`` means to take the values as they are
         """
         if lat is not None:
             self.lat = lat
@@ -441,15 +469,16 @@ class GPSCoordinate(AltitudeMixin):
         if precision is not None:
             self.round(precision)
 
-    def update_from(self, other, precision=None):
+    def update_from(
+        self, other: GPSCoordinate, precision: Optional[int] = None
+    ) -> None:
         """Updates the coordinates of this object from another instance
         of GPSCoordinate_.
 
         Parameters:
-            other (GPSCoordinate): the other object to copy the values from.
-            precision (Optional[int]): the number of decimal digits to
-                round the latitude and longitude to; ``None`` means to take
-                the values as they are
+            other: the other object to copy the values from.
+            precision: the number of decimal digits to round the latitude and
+                longitude to; ``None`` means to take the values as they are
         """
         self.update(
             lat=other.lat,
@@ -462,6 +491,9 @@ class GPSCoordinate(AltitudeMixin):
 
 class FlatEarthCoordinate(AltitudeMixin):
     """Class representing a coordinate given in flat Earth coordinates."""
+
+    _x: float
+    _y: float
 
     @classmethod
     def from_json(cls, data):
@@ -490,7 +522,7 @@ class FlatEarthCoordinate(AltitudeMixin):
         self.x = x
         self.y = y
 
-    def copy(self):
+    def copy(self: C3) -> C3:
         """Returns a copy of the current flat Earth coordinate object."""
         return self.__class__(x=self.x, y=self.y, amsl=self.amsl, agl=self.agl)
 
@@ -504,7 +536,7 @@ class FlatEarthCoordinate(AltitudeMixin):
             int(round(self._agl * 1e3)) if self._agl is not None else None,
         ]
 
-    def round(self, precision):
+    def round(self, precision: int) -> None:
         """Rounds the X and Y coordinates of the vector to the given
         number of decimal digits. Altitude is left intact.
 
@@ -514,21 +546,25 @@ class FlatEarthCoordinate(AltitudeMixin):
         self._x = round(self._x, precision)
         self._y = round(self._y, precision)
 
-    def update(self, x=None, y=None, amsl=None, agl=None, precision=None):
+    def update(
+        self,
+        x: Optional[float] = None,
+        y: Optional[float] = None,
+        amsl: Optional[float] = None,
+        agl: Optional[float] = None,
+        precision: Optional[int] = None,
+    ) -> None:
         """Updates the coordinates of this object.
 
         Parameters:
-            x (Optional[float]): the new X coordinate; ``None`` means to
-                leave the current value intact.
-            y (Optional[float]): the new Y coordinate; ``None`` means to
-                leave the current value intact.
-            amsl (Optional[float]): the new altitude above mean sea level;
-                ``None`` means to leave the current value intact.
-            agl (Optional[float]): the new altitude above ground level;
-                ``None`` means to leave the current value intact.
-            precision (Optional[int]): the number of decimal digits to
-                round the X and Y to; ``None`` means to take the
-                values as they are
+            x: the new X coordinate; `None` means to leave the current value intact.
+            y: the new Y coordinate; `None` means to leave the current value intact.
+            amsl: the new altitude above mean sea level; `None` means to leave
+                the current value intact.
+            agl: the new altitude above ground level; `None` means to leave the
+                current value intact.
+            precision: the number of decimal digits to round the X and Y
+                coordinates to; ``None`` means to take the values as they are
         """
         if x is not None:
             self.x = x
@@ -541,37 +577,35 @@ class FlatEarthCoordinate(AltitudeMixin):
         if precision is not None:
             self.round(precision)
 
-    def update_from(self, other, precision=None):
+    def update_from(self, other: FlatEarthCoordinate, precision: Optional[int] = None):
         """Updates the coordinates of this object from another instance
         of FlatEarthCoordinate_.
 
         Parameters:
-            other (FlatEarthCoordinate): the other object to copy the
-                values from.
-            precision (Optional[int]): the number of decimal digits to
-                round the X and Y to; ``None`` means to take the
-                values as they are
+            other: the other object to copy the values from.
+            precision: the number of decimal digits to round the X and Y
+                coordinates to; ``None`` means to take the values as they are
         """
         self.update(
             x=other.x, y=other.y, amsl=other.amsl, agl=other.agl, precision=precision
         )
 
     @property
-    def x(self):
+    def x(self) -> float:
         """The X coordinate."""
         return self._x
 
     @x.setter
-    def x(self, value):
+    def x(self, value: float) -> None:
         self._x = float(value)
 
     @property
-    def y(self):
+    def y(self) -> float:
         """The Y coordinate."""
         return self._y
 
     @y.setter
-    def y(self, value):
+    def y(self, value: float) -> None:
         self._y = float(value)
 
 
@@ -580,12 +614,15 @@ class ECEFToGPSCoordinateTransformation(object):
     and vice versa.
     """
 
-    def __init__(self, radii=None):
+    _eq_radius: float
+    _polar_radius: float
+
+    def __init__(self, radii: Optional[Tuple[float, float]] = None):
         """Constructor.
 
         Parameters:
-            radii (float, float): the equatorial and the polar radius, in
-                metres. ``None`` means to use the WGS84 ellipsoid.
+            radii: the equatorial and the polar radius, in metres. ``None``
+                means to use the WGS84 ellipsoid.
         """
         self._eq_radius, self._polar_radius = 0.0, 0.0
         if radii is None:
@@ -594,17 +631,17 @@ class ECEFToGPSCoordinateTransformation(object):
             self.radii = radii
 
     @property
-    def radii(self):
+    def radii(self) -> Tuple[float, float]:
         """The equatorial and polar radius of the ellipsoid, in metres."""
         return self._eq_radius, self._polar_radius
 
     @radii.setter
-    def radii(self, value):
+    def radii(self, value: Tuple[float, float]) -> None:
         self._eq_radius = float(value[0])
         self._polar_radius = float(value[1])
         self._recalculate()
 
-    def _recalculate(self):
+    def _recalculate(self) -> None:
         """Recalculates some cached values that are re-used across different
         transformations.
         """
@@ -618,14 +655,14 @@ class ECEFToGPSCoordinateTransformation(object):
             self._eq_radius - self._polar_radius_sq / self._eq_radius
         )
 
-    def to_ecef(self, coord):
+    def to_ecef(self, coord: GPSCoordinate) -> ECEFCoordinate:
         """Converts the given GPS coordinates to ECEF coordinates.
 
         Parameters:
-            coord (GPSCoordinate): the coordinate to convert
+            coord: the coordinate to convert
 
         Returns:
-            ECEFCoordinate: the converted coordinate
+            the converted coordinate
         """
         if coord.amsl is None:
             raise ValueError(
@@ -642,14 +679,14 @@ class ECEFToGPSCoordinateTransformation(object):
         z = (n * (1 - self._ecc_sq) + height) * sin(lat)
         return ECEFCoordinate(x=x, y=y, z=z)
 
-    def to_gps(self, coord):
+    def to_gps(self, coord: ECEFCoordinate) -> GPSCoordinate:
         """Converts the given ECEF coordinates to GPS coordinates.
 
         Parameters:
-            coord (ECEFCoordinate): the coordinate to convert
+            coord: the coordinate to convert
 
         Returns:
-            GPSCoordinate: the converted coordinate
+            the converted coordinate
         """
         x, y, z = coord.x, coord.y, coord.z
         p = sqrt(x ** 2 + y ** 2)
@@ -669,6 +706,15 @@ class FlatEarthToGPSCoordinateTransformation(object):
     """Transformation that converts flat Earth coordinates to GPS
     coordinates and vice versa.
     """
+
+    _origin_lat: float
+    _origin_lon: float
+
+    _xmul: float
+    _ymul: float
+    _zmul: float
+    _sin_alpha: float
+    _cos_alpha: float
 
     @staticmethod
     def _normalize_type(type):
@@ -700,22 +746,27 @@ class FlatEarthToGPSCoordinateTransformation(object):
             type=json["type"],
         )
 
-    def __init__(self, origin=None, orientation=0, type="nwu"):
+    def __init__(
+        self,
+        origin: Optional[GPSCoordinate] = None,
+        orientation: float = 0,
+        type: str = "nwu",
+    ):
         """Constructor.
 
         Parameters:
-            origin (GPSCoordinate): origin of the flat Earth coordinate
-                system, in GPS coordinates. Altitude component is ignored.
-                The coordinate will be copied.
-            orientation (float): orientation of the X axis of the coordinate
-                system, in degrees, relative to North (zero degrees),
-                increasing in CW direction.
-            type (str): orientation of the coordinate system; can be `"neu"`
+            origin: origin of the flat Earth coordinate system, in GPS
+                coordinates. Altitude component is ignored. The coordinate will
+                be copied.
+            orientation: orientation of the X axis of the coordinate system, in
+                degrees, relative to North (zero degrees), increasing in CW
+                direction.
+            type: orientation of the coordinate system; can be `"neu"`
                 (North-East-Up), `"nwu"` (North-West-Up), `"ned"`
                 (North-East-Down) or `"nwd"` (North-West-Down)
         """
-        self._origin_lat = None
-        self._origin_lon = None
+        self._origin_lat = 0
+        self._origin_lon = 0
         self._orientation = float(orientation)
         self._type = self._normalize_type(type)
 
@@ -731,20 +782,20 @@ class FlatEarthToGPSCoordinateTransformation(object):
         }
 
     @property
-    def orientation(self):
+    def orientation(self) -> float:
         """The orientation of the X axis of the coordinate system, in degrees,
         relative to North (zero degrees), increasing in clockwise direction.
         """
         return self._orientation
 
     @orientation.setter
-    def orientation(self, value):
+    def orientation(self, value: float) -> None:
         if self._orientation != value:
             self._orientation = value
             self._recalculate()
 
     @property
-    def origin(self):
+    def origin(self) -> GPSCoordinate:
         """The origin of the transformation, in GPS coordinates. The
         property uses a copy so you can safely modify the value returned
         by the getter without affecting the transformation.
@@ -752,23 +803,23 @@ class FlatEarthToGPSCoordinateTransformation(object):
         return GPSCoordinate(lat=self._origin_lat, lon=self._origin_lon)
 
     @origin.setter
-    def origin(self, value):
+    def origin(self, value: GPSCoordinate) -> None:
         self._origin_lat = float(value.lat)
         self._origin_lon = float(value.lon)
         self._recalculate()
 
     @property
-    def type(self):
+    def type(self) -> str:
         """The type of the coordinate system."""
         return self._type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: str) -> None:
         if self._type != value:
             self._type = value
             self._recalculate()
 
-    def _recalculate(self):
+    def _recalculate(self) -> None:
         """Recalculates some cached values that are re-used across different
         transformations.
         """
@@ -790,14 +841,14 @@ class FlatEarthToGPSCoordinateTransformation(object):
         self._ymul = 1 if self._type[1] == "e" else -1
         self._zmul = 1 if self._type[2] == "u" else -1
 
-    def to_flat_earth(self, coord):
+    def to_flat_earth(self, coord: GPSCoordinate) -> FlatEarthCoordinate:
         """Converts the given GPS coordinates to flat Earth coordinates.
 
         Parameters:
-            coord (GPSCoordinate): the coordinate to convert
+            coord: the coordinate to convert
 
         Returns:
-            FlatEarthCoordinate: the converted coordinate
+            the converted coordinate
         """
         x, y = (
             radians(coord.lat - self._origin_lat) * self._r1,
@@ -815,14 +866,14 @@ class FlatEarthToGPSCoordinateTransformation(object):
             agl=coord.agl * self._zmul if coord.agl is not None else None,
         )
 
-    def to_gps(self, coord):
+    def to_gps(self, coord: FlatEarthCoordinate) -> GPSCoordinate:
         """Converts the given flat Earth coordinates to GPS coordinates.
 
         Parameters:
-            coord (FlatEarthCoordinate): the coordinate to convert
+            coord: the coordinate to convert
 
         Returns:
-            GPSCoordinate: the converted coordinate
+            the converted coordinate
         """
         x, y = (coord.x * self._xmul, coord.y * self._ymul)
 

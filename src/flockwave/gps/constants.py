@@ -3,7 +3,7 @@
 __all__ = ("WGS84", "GPS_PI", "SPEED_OF_LIGHT_M_S", "SPEED_OF_LIGHT_KM_S")
 
 
-class WGS84(object):
+class WGS84:
     """WGS84 ellipsoid model parameters for Earth."""
 
     ####################################################################
