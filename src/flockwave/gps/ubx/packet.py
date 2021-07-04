@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable
+from typing import Callable, Dict, Tuple
 
 from .enums import UBXClass
 from .utils import calculate_ubx_checksum
@@ -14,7 +14,7 @@ __all__ = ("UBX", "UBXPacket")
 class UBXPacket:
     """Generic U-blox message type."""
 
-    class_id: UBXClass
+    class_id: int
     subclass_id: int
     payload: bytes
 
@@ -40,7 +40,7 @@ class UBXPacket:
         return header_and_payload + chksum
 
 
-_ubx_message_class_and_subclass_map = {
+_ubx_message_class_and_subclass_map: Dict[str, Tuple[UBXClass, int]] = {
     "CFG_PRT": (UBXClass.CFG, 0),
     "CFG_MSG": (UBXClass.CFG, 1),
     "CFG_RATE": (UBXClass.CFG, 8),

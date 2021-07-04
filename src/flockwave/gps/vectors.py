@@ -29,7 +29,10 @@ class AltitudeMixin(object):
     above ground level) property with appropriate getters and setters.
     """
 
-    def __init__(self, amsl=None, agl=None):
+    _agl: Optional[float]
+    _amsl: Optional[float]
+
+    def __init__(self, amsl: Optional[float] = None, agl: Optional[float] = None):
         """Constructor."""
         self._agl = None
         self._amsl = None
@@ -37,21 +40,21 @@ class AltitudeMixin(object):
         self.amsl = amsl
 
     @property
-    def agl(self):
+    def agl(self) -> Optional[float]:
         """The altitude above ground level."""
         return self._agl
 
     @agl.setter
-    def agl(self, value):
+    def agl(self, value: Optional[float]) -> None:
         self._agl = float(value) if value is not None else None
 
     @property
-    def amsl(self):
+    def amsl(self) -> Optional[float]:
         """The altitude above mean sea level."""
         return self._amsl
 
     @amsl.setter
-    def amsl(self, value):
+    def amsl(self, value: Optional[float]) -> None:
         self._amsl = float(value) if value is not None else None
 
 
@@ -506,16 +509,20 @@ class FlatEarthCoordinate(AltitudeMixin):
             agl=data[3] * 1e-3 if length > 3 and data[3] is not None else None,
         )
 
-    def __init__(self, x=0.0, y=0.0, amsl=None, agl=None):
+    def __init__(
+        self,
+        x: float = 0.0,
+        y: float = 0.0,
+        amsl: Optional[float] = None,
+        agl: Optional[float] = None,
+    ):
         """Constructor.
 
         Parameters:
-            x (float): the X coordinate
-            y (float): the Y coordinate
-            amsl (Optional[float]): the altitude above mean sea level,
-                if known
-            agl (Optional[float]): the altitude above ground level, if
-                known
+            x: the X coordinate
+            y: the Y coordinate
+            amsl: the altitude above mean sea level, if known
+            agl: the altitude above ground level, if known
         """
         AltitudeMixin.__init__(self, amsl=amsl, agl=agl)
         self._x, self._y = 0.0, 0.0

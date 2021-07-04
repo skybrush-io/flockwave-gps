@@ -36,7 +36,7 @@ class UBXRTKBaseConfigurator:
     async def run(
         self,
         write: Callable[[bytes], Awaitable[None]],
-        sleep: Callable[[], Awaitable[None]],
+        sleep: Callable[[float], Awaitable[None]],
     ):
         """Asynchronous task that configures a U-blox GPS receiver as an RTK base
         station (if the GPS is capable enough).
@@ -45,7 +45,7 @@ class UBXRTKBaseConfigurator:
             write: a writer function that can be used to send commands to the GPS
                 receiver
             sleep: a function that can be called to sleep a bit without blocking
-                other tasks
+                other tasks. Takes the number of seconds to sleep.
         """
         encoder = create_ubx_encoder()
 
@@ -137,7 +137,7 @@ class UBXRTKBaseConfigurator:
                 await set_message_rate(UBXClass.NMEA, i, 0)
 
         # Request receiver version
-        await send(UBX.MON_VER())
+        await send(UBX.MON_VER(b""))
 
         # Request survey-in data so we can provide feedback to the user about the
         # survey-in procedure
@@ -231,7 +231,7 @@ class UBXRTKBaseConfigurator:
         await send(UBX.CFG_TMODE3(payload))
 
         # Read the CFG_TMODE3 settings back for confirmation
-        await send(UBX.CFG_TMODE3())
+        await send(UBX.CFG_TMODE3(b""))
 
 
 def test_rtk_base_configuration() -> None:
@@ -254,7 +254,7 @@ def test_rtk_base_configuration() -> None:
             while True:
                 data = await port.receive_some()
                 # print("raw:", hexlify(data, sep=" ").decode("ascii"))
-                for message in parser(data):
+                for message in parser(data):  # type: ignore
                     print(message)
 
     run(main)
