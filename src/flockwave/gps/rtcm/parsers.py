@@ -4,7 +4,17 @@ from abc import ABCMeta, abstractmethod
 from builtins import bytes, range
 from bitstring import ConstBitStream
 from enum import Enum
-from typing import Callable, Generic, Iterable, Optional, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from flockwave.gps.crc import crc24q
 
@@ -50,7 +60,7 @@ class RTCMParser(Generic[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class RTCMParserBase(Generic[T], RTCMParser[T]):
+class RTCMParserBase(RTCMParser[T]):
     """Base class for RTCM V2 and V3 parsers."""
 
     def __init__(self, max_packet_length: Optional[int] = None):
@@ -127,6 +137,11 @@ class RTCMV2Parser(RTCMParserBase[RTCMV2Packet]):
         0x8B7A89C0,
     ]
 
+    _state: RTCMV2ParserState
+    _length: int
+    _num_bits: int
+    _packet: bytearray
+
     def __init__(self, *args, **kwds):
         """Constructor."""
         self._word = 0
@@ -136,7 +151,7 @@ class RTCMV2Parser(RTCMParserBase[RTCMV2Packet]):
     def reset(self) -> None:
         """Resets the state of the parser."""
         self._state = RTCMV2ParserState.START
-        self._length = None
+        self._length = 0
         self._num_bits = 0
         self._packet = bytearray()
 
@@ -267,6 +282,11 @@ class RTCMV3Parser(RTCMParserBase[RTCMV3Packet]):
 
     PREAMBLE = 0xD3
 
+    _state: RTCMV3ParserState
+    _packet_length: int
+    _packet: bytearray
+    _parity: bytearray
+
     def reset(self) -> None:
         """Resets the state of the parser."""
         self._state = RTCMV3ParserState.START
@@ -373,6 +393,10 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
     generates a packet will be used and the other will be discarded.
     """
 
+    _subparsers: List[RTCMParserBase[Any]]
+    _chosen_subparser: Optional[RTCMParserBase[Any]]
+    _pending_checksum_errors: List[Tuple[RTCMParserBase, ChecksumError]]
+
     def __init__(self, *args, **kwds):
         """Constructor."""
         self._subparsers = [RTCMV2Parser(*args, **kwds), RTCMV3Parser(*args, **kwds)]
@@ -413,9 +437,11 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
             except ChecksumError as ex:
                 # We get here if we have already chosen the subparser
                 # and the chosen subparser subsequently throws checksum
-                # errors.
-                recover = self._chosen_subparser._recover_from_checksum_mismatch
-                result.extend(recover(ex.packet, ex.parity))
+                # errors, so the check below is not strictly necessary; it is
+                # there to make Pylance happy
+                if self._chosen_subparser:
+                    recover = self._chosen_subparser._recover_from_checksum_mismatch
+                    result.extend(recover(ex.packet, ex.parity))
 
             if self._chosen_subparser is None:
                 # We get here if we have not chosen a subparser yet and
@@ -437,13 +463,14 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
                     result = parser._feed_byte(byte)
                 except ChecksumError as ex:
                     self._pending_checksum_errors.append((parser, ex))
+                    result = None
                 if result is not None:
                     self._chosen_subparser = parser
                     return result
 
     def _process_pending_checksum_errors(
         self,
-    ) -> Tuple[Iterable[RTCMPacket], RTCMParser]:
+    ) -> Tuple[Iterable[RTCMPacket], Optional[RTCMParserBase]]:
         """Processes unprocessed checksum errors from subparsers to see
         if any of the recovery attempts yield proper packets. Returns a
         list of the recovered packets, or an empty list if there was
@@ -489,7 +516,7 @@ def main():
     parser = create_rtcm_parser("rtcm3")
     with ExitStack() as stack:
         if len(sys.argv) > 1:
-            fp = stack.enter_context(open(sys.argv[1]))
+            fp = stack.enter_context(open(sys.argv[1], "rb"))
         else:
             fp = sys.stdin.buffer
         while True:
@@ -499,7 +526,7 @@ def main():
 
             for packet in parser(chunk):
                 if hasattr(packet, "json"):
-                    print(packet.json)
+                    print(packet.json)  # type: ignore
                 else:
                     pass
                     # print(repr(packet))
