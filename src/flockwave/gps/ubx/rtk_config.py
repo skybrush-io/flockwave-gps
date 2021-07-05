@@ -162,7 +162,7 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
         await set_message_rate(
             UBXClass.RTCM3, 87, 1 if use_high_precision and enabled else 0
         )
-        await set_message_rate(UBXClass.RTCM3, 230, 5)
+        await set_message_rate(UBXClass.RTCM3, 230, 5 if enabled else 0)
 
         # Galileo MSM message
         enabled = self.settings.uses_gnss(GNSSType.GALILEO)
