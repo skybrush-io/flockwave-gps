@@ -4,34 +4,25 @@ station (if the GPS is capable enough).
 
 from typing import Awaitable, Callable
 
+from flockwave.gps.enums import GNSSType
+from flockwave.gps.rtk import RTKBaseConfigurator, RTKMessageSet, RTKSurveySettings
+
 from .encoder import create_ubx_encoder
 from .packet import UBX, UBXClass
 
 __all__ = ("UBXRTKBaseConfigurator",)
 
 
-class UBXRTKBaseConfigurator:
+class UBXRTKBaseConfigurator(RTKBaseConfigurator):
     """Class that knows how to configure a U-blox GPS receiver as an RTK
     base with given survey-in duration and accuracy.
-
-    Attributes:
-        duration: the minimum survey-in duration, in seconds
-        accuracy: the desired survey-in accuracy, in meters
-        use_high_precision: whether to use high-accuracy RTCM messages if
-            the base station supports them; set this to `False` if the base
-            supports high-accuracy MSM messages but the rover does not
     """
 
-    def __init__(
-        self,
-        duration: float = 60,
-        accuracy: float = 0.02,
-        use_high_precision: bool = True,
-    ):
+    settings: RTKSurveySettings
+
+    def __init__(self, settings: RTKSurveySettings):
         """Constructor."""
-        self.duration = float(duration)
-        self.accuracy = float(accuracy)
-        self.use_high_precision = bool(use_high_precision)
+        self.settings = settings
 
     async def run(
         self,
@@ -150,24 +141,46 @@ class UBXRTKBaseConfigurator:
         # 130 and on uBlox F9P. We should do autodetection here.
         # TODO(ntamas): find out how to get the firmware revision.
         high_precision_supported = True
-        use_high_precision = high_precision_supported and self.use_high_precision
+        use_high_precision = (
+            high_precision_supported and self.settings.message_set is RTKMessageSet.MSM7
+        )
 
         # GPS MSM message
-        await set_message_rate(UBXClass.RTCM3, 74, 0 if use_high_precision else 1)
-        await set_message_rate(UBXClass.RTCM3, 77, 1 if use_high_precision else 0)
+        enabled = self.settings.uses_gnss(GNSSType.GPS)
+        await set_message_rate(
+            UBXClass.RTCM3, 74, 0 if use_high_precision or not enabled else 1
+        )
+        await set_message_rate(
+            UBXClass.RTCM3, 77, 1 if use_high_precision and enabled else 0
+        )
 
         # GLONASS MSM message
-        await set_message_rate(UBXClass.RTCM3, 84, 0 if use_high_precision else 1)
-        await set_message_rate(UBXClass.RTCM3, 87, 1 if use_high_precision else 0)
+        enabled = self.settings.uses_gnss(GNSSType.GLONASS)
+        await set_message_rate(
+            UBXClass.RTCM3, 84, 0 if use_high_precision or not enabled else 1
+        )
+        await set_message_rate(
+            UBXClass.RTCM3, 87, 1 if use_high_precision and enabled else 0
+        )
         await set_message_rate(UBXClass.RTCM3, 230, 5)
 
         # Galileo MSM message
-        await set_message_rate(UBXClass.RTCM3, 94, 0 if use_high_precision else 1)
-        await set_message_rate(UBXClass.RTCM3, 97, 1 if use_high_precision else 0)
+        enabled = self.settings.uses_gnss(GNSSType.GALILEO)
+        await set_message_rate(
+            UBXClass.RTCM3, 94, 0 if use_high_precision or not enabled else 1
+        )
+        await set_message_rate(
+            UBXClass.RTCM3, 97, 1 if use_high_precision and enabled else 0
+        )
 
         # BeiDou MSM message
-        await set_message_rate(UBXClass.RTCM3, 124, 0 if use_high_precision else 1)
-        await set_message_rate(UBXClass.RTCM3, 127, 1 if use_high_precision else 0)
+        enabled = self.settings.uses_gnss(GNSSType.BEIDOU)
+        await set_message_rate(
+            UBXClass.RTCM3, 124, 0 if use_high_precision or not enabled else 1
+        )
+        await set_message_rate(
+            UBXClass.RTCM3, 127, 1 if use_high_precision and enabled else 0
+        )
 
         # No moving baseline messages
         await set_message_rate(UBXClass.RTCM3, 254, 0)
@@ -218,11 +231,13 @@ class UBXRTKBaseConfigurator:
         )
         payload += (
             # Survey-in minimum duration [sec]
-            max(int(round(self.duration)), 1).to_bytes(4, "little", signed=False)
+            max(int(round(self.settings.duration)), 1).to_bytes(
+                4, "little", signed=False
+            )
         )
         payload += (
             # Survey-in position accuracy limit [0.1 mm]
-            max(int(round(self.accuracy * 10000)), 1).to_bytes(
+            max(int(round(self.settings.accuracy * 10000)), 1).to_bytes(
                 4, "little", signed=False
             )
         )
@@ -248,13 +263,17 @@ def test_rtk_base_configuration() -> None:
         parser = create_gps_parser()
 
         async with open_nursery() as nursery:
-            config = UBXRTKBaseConfigurator(accuracy=10)
+            settings = RTKSurveySettings(accuracy=10)
+            settings.set_gnss_types(["gps", "glonass"])
+            config = UBXRTKBaseConfigurator(settings)
             nursery.start_soon(config.run, port.send_all, sleep)
 
             while True:
                 data = await port.receive_some()
                 # print("raw:", hexlify(data, sep=" ").decode("ascii"))
                 for message in parser(data):  # type: ignore
+                    if hasattr(message, "packet_type"):
+                        print(f"{message.packet_type}", end=" ")
                     print(message)
 
     run(main)
