@@ -8,9 +8,14 @@ class GNSSType(Enum):
     world.
     """
 
+    # The order below reflects the order of these satellite systems in the
+    # RTCM3 MSM message list; e.g., 1087 is GPS MSM7, 1097 is GLONASS MSM7,
+    # 1107 is Galileo MSM7 and so on
+
     GPS = "gps"
     GLONASS = "glonass"
     GALILEO = "galileo"
-    BEIDOU = "beidou"
+    SBAS = "sbas"
     QZSS = "qzss"
-    NAVIC = "navic"
+    BEIDOU = "beidou"
+    IRNSS = "irnss"
