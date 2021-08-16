@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set, Union
 
 from flockwave.gps.enums import GNSSType
+from flockwave.gps.vectors import ECEFCoordinate
 
 __all__ = ("RTKSurveySettings",)
 
@@ -19,14 +20,20 @@ class RTKMessageSet(Enum):
 
 @dataclass
 class RTKSurveySettings:
-    """Object holding the settings of an RTK survey to be performed by an
-    RTK-enabled base station before it can start streaming corrections.
+    """Object holding typical settings of an RTK base station that need to be
+    configured on the base station before it can start streaming corrections.
     """
+
+    #: Position of the base station, in ECEF coordinates, if known; `None` if
+    #: the position is not known and the base station has to measure it.
+    position: Optional[ECEFCoordinate] = None
 
     #: Minimum duration of the survey, in seconds
     duration: float = 60
 
-    #: Desired accuracy of the survey, in meters
+    #: Accuracy of the survey, in meters. When no base station position is
+    #: given, this value encodes the _desired_ accuracy of the survey. When a
+    #: known position is given, this value encodes the accuracy of the position.
     accuracy: float = 1
 
     #: Message set to request during the survey
@@ -36,6 +43,7 @@ class RTKSurveySettings:
     #: supported GNSS types
     gnss_types: Optional[Set[GNSSType]] = None
 
+    #: Fixed position
     @classmethod
     def from_json(cls, data):
         result = cls()
@@ -49,6 +57,8 @@ class RTKSurveySettings:
             "accuracy": self.accuracy,
             "messageSet": self.message_set,
         }
+        if self.position is not None:
+            result["position"] = self.position.json
         if self.gnss_types is not None:
             result["gnssTypes"] = sorted(
                 gnss_type.value for gnss_type in self.gnss_types
@@ -108,6 +118,17 @@ class RTKSurveySettings:
         message_set = data.get("messageSet")
         if message_set is not None:
             self.message_set = RTKMessageSet(message_set)
+
+        if "position" in data:
+            position = data["position"]
+            if isinstance(position, dict):
+                raise ValueError("invalid base station position")
+            elif position is None:
+                self.position = None
+            elif isinstance(position, Iterable):
+                self.position = ECEFCoordinate(*tuple(position)[:3])
+            else:
+                raise ValueError("invalid base station position")
 
         if "gnssTypes" in data:
             gnss_types = data["gnssTypes"]

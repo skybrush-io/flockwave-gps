@@ -3,6 +3,8 @@ from flockwave.gps.enums import GNSSType
 
 from flockwave.gps.rtk import RTKMessageSet, RTKSurveySettings
 
+from flockwave.gps.vectors import ECEFCoordinate
+
 
 def test_rtk_survey_settings_to_and_from_json():
     settings = RTKSurveySettings()
@@ -29,6 +31,19 @@ def test_survey_settings_to_json_with_gnss_subset():
     assert "gnssTypes" not in settings.json
 
 
+def test_survey_settings_to_json_with_fixed_position():
+    settings = RTKSurveySettings()
+    settings.position = ECEFCoordinate(4120354, 1418752, 4641855)
+    obj = settings.json
+
+    settings_new = RTKSurveySettings.from_json(obj)
+
+    assert settings == settings_new
+
+    settings.position = None
+    assert "position" not in settings.json
+
+
 def test_rtk_survey_settings_reset():
     defaults = RTKSurveySettings()
 
@@ -46,20 +61,22 @@ def test_rtk_survey_settings_reset():
 def test_rtk_survey_settings_update_from_json():
     settings = RTKSurveySettings()
     settings.update_from_json(
-        {"duration": 240, "accuracy": 0.5, "gnssTypes": ["gps", "glonass"]}
+        {"duration": 240, "accuracy": 0.5, "gnssTypes": ["gps", "glonass"], "position": [4120354, 1418752, 4641855]}
     )
 
     assert settings.duration == 240
     assert settings.accuracy == 0.5
     assert settings.gnss_types == set([GNSSType.GPS, GNSSType.GLONASS])
     assert settings.message_set == RTKMessageSet.MSM7
+    assert settings.position == ECEFCoordinate(4120354, 1418752, 4641855)
 
-    settings.update_from_json({"duration": 180, "messageSet": "msm4"})
+    settings.update_from_json({"duration": 180, "messageSet": "msm4", "position": None})
 
     assert settings.duration == 180
     assert settings.accuracy == 0.5
     assert settings.gnss_types == set([GNSSType.GPS, GNSSType.GLONASS])
     assert settings.message_set is RTKMessageSet.MSM4
+    assert settings.position is None
 
     settings.update_from_json({"duration": 180, "messageSet": "msm4"}, reset=True)
 
@@ -92,6 +109,12 @@ def test_rtk_survey_settings_update_from_json_errors():
 
     with raises(ValueError):
         settings.update_from_json({"gnssTypes": ["turul"]})
+
+    with raises(ValueError):
+        settings.update_from_json({"position": {"x": 1, "y": 2}})
+
+    with raises(ValueError):
+        settings.update_from_json({"position": 123})
 
 
 def test_rtk_survey_uses_gnss():
