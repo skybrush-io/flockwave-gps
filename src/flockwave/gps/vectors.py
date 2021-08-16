@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from math import atan2, cos, degrees, radians, sin, sqrt
-from typing import List, Optional, Tuple, TypeVar
+from typing import Any, List, Optional, Tuple, TypeVar
 
 from .constants import WGS84
 
@@ -184,9 +184,18 @@ class Vector3D:
     def z(self, value: float):
         self._z = float(value)
 
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Vector3D):
+            return self._x == other._x and self._y == other._y and self._z == other._z
+        else:
+            return False
+
     def __floordiv__(self: C, other: float) -> C:
         # Don't use keyword arguments below; it would break VelocityNED
         return self.__class__(self._x // other, self._y // other, self._z // other)
+
+    def __hash__(self):
+        return hash((self._x, self._y, self._z))
 
     def __ifloordiv__(self, other: float) -> None:
         self._x //= other
@@ -616,7 +625,7 @@ class FlatEarthCoordinate(AltitudeMixin):
         self._y = float(value)
 
 
-class ECEFToGPSCoordinateTransformation(object):
+class ECEFToGPSCoordinateTransformation:
     """Transformation that converts ECEF coordinates to GPS coordinates
     and vice versa.
     """
