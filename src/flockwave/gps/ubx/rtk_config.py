@@ -2,6 +2,7 @@
 station (if the GPS is capable enough).
 """
 
+from struct import pack
 from typing import Awaitable, Callable
 
 from flockwave.gps.enums import GNSSType
@@ -15,7 +16,7 @@ __all__ = ("UBXRTKBaseConfigurator",)
 
 class UBXRTKBaseConfigurator(RTKBaseConfigurator):
     """Class that knows how to configure a U-blox GPS receiver as an RTK
-    base with given survey-in duration and accuracy.
+    base station, optionally with given survey-in duration and accuracy.
     """
 
     settings: RTKSurveySettings
@@ -195,54 +196,47 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
         # Set survey-in duration and accuracy requirements
         await sleep(0.2)
 
-        payload = bytes(
-            [
-                # Version
-                0x00,
-                # Reserved
-                0x00,
-                # Flags; 0x01 = survey-in mode
-                0x01,
-                0x00,
-                # ECEF coordinates (X, Y, Z, high-precision X, Y, Z)
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                # Reserved
-                0x00,
-                # Fixed-position 3D accuracy [0.1 mm], not applicable
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-            ]
-        )
-        payload += (
+        # CFG-TMODE3 parameter payload assembly
+        position = self.settings.position
+        if position is not None:
+            position_in_cm = position * 100  # [m] --> [cm]
+            coords = (
+                int(round(position_in_cm.x)),
+                int(round(position_in_cm.y)),
+                int(round(position_in_cm.z)),
+            )
+            flags = 0x02  # 2 = fixed position
+            fixed_accuracy = max(
+                int(round(self.settings.accuracy * 10000)), 1
+            )  # [m] --> [0.1 mm]
+            min_accuracy = 0
+        else:
+            coords = 0, 0, 0
+            flags = 0x01  # 1 = self-survey
+            fixed_accuracy = 0
+            min_accuracy = max(
+                int(round(self.settings.accuracy * 10000)), 1
+            )  # [m] --> [0.1 mm]
+        payload = pack(
+            "<BBHiiiiiiBBIIQ",
+            0,  # version
+            0,  # reserved 1
+            flags,
+            coords[0],  # ECEF coordinate X
+            coords[1],  # ECEF coordinate Y
+            coords[2],  # ECEF coordinate Z
+            0,  # ECEF coordinate X (high-precision)
+            0,  # ECEF coordinate Y (high-precision)
+            0,  # ECEF coordinate Z (high-precision)
+            0,  # reserved 2
+            fixed_accuracy,  # fixed-pos 3D accuracy
             # Survey-in minimum duration [sec]
-            max(int(round(self.settings.duration)), 1).to_bytes(
-                4, "little", signed=False
-            )
-        )
-        payload += (
+            max(int(round(self.settings.duration)), 1),
             # Survey-in position accuracy limit [0.1 mm]
-            max(int(round(self.settings.accuracy * 10000)), 1).to_bytes(
-                4, "little", signed=False
-            )
+            min_accuracy,
+            # Reserved 3 (8 bytes)
+            0,
         )
-        # Reserved
-        payload += bytes([0] * 8)
         await send(UBX.CFG_TMODE3(payload))
 
         # Read the CFG_TMODE3 settings back for confirmation

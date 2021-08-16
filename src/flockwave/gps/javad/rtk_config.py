@@ -12,7 +12,7 @@ __all__ = ("JavadRTKBaseConfigurator",)
 
 class JavadRTKBaseConfigurator(RTKBaseConfigurator):
     """Class that knows how to configure a Javad GNSS receiver as an RTK
-    base with given survey-in duration.
+    base with a given settings object.
 
     Javad receivers do not support setting a desired accuracy so this parameter
     of the RTK survey settings will be ignored.
@@ -55,9 +55,17 @@ class JavadRTKBaseConfigurator(RTKBaseConfigurator):
         # Disable all messages on the current port
         await send("dm,/cur/term")
 
-        # Start averaging when turned on, for the given duration
-        await set("/par/ref/avg/span", round(self.settings.duration))
-        await set("/par/ref/avg/mode", True)
+        if self.settings.position is None:
+            # Start averaging when turned on, for the given duration
+            await set("/par/ref/avg/span", round(self.settings.duration))
+            await set("/par/ref/avg/mode", True)
+        else:
+            # Set antenna reference position manually
+            await set("/par/ref/avg/mode", False)
+            await set(
+                "/par/ref/pos//xyz",
+                "{{W84,{0.x},{0.y},{0.z}}}".format(self.settings.position),
+            )
 
         # Enable the appropriate GNSS systems. Note that we never disable a GNSS
         # system if it was enabled by the user; this is intentional as the user
