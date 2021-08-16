@@ -1,6 +1,12 @@
+from __future__ import annotations
+
 from enum import Enum
+from typing import Dict
 
 __all__ = ("GNSSType",)
+
+
+_gnss_type_to_string: Dict["GNSSType", str] = {}
 
 
 class GNSSType(Enum):
@@ -19,3 +25,16 @@ class GNSSType(Enum):
     QZSS = "qzss"
     BEIDOU = "beidou"
     IRNSS = "irnss"
+
+    def describe(self) -> str:
+        result = _gnss_type_to_string.get(self)
+        return result or f"unknown GNSS type: {self!r}"
+
+
+_gnss_type_to_string[GNSSType.GPS] = "GPS"
+_gnss_type_to_string[GNSSType.GLONASS] = "GLONASS"
+_gnss_type_to_string[GNSSType.GALILEO] = "Galileo"
+_gnss_type_to_string[GNSSType.SBAS] = "SBAS"
+_gnss_type_to_string[GNSSType.QZSS] = "QZSS"
+_gnss_type_to_string[GNSSType.BEIDOU] = "BeiDou"
+_gnss_type_to_string[GNSSType.IRNSS] = "IRNSS"
