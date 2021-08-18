@@ -199,11 +199,14 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
         # CFG-TMODE3 parameter payload assembly
         position = self.settings.position
         if position is not None:
-            position_in_cm = position * 100  # [m] --> [cm]
-            coords = (
-                int(round(position_in_cm.x)),
-                int(round(position_in_cm.y)),
-                int(round(position_in_cm.z)),
+            position_in_one_tenth_of_mm = position * 10000  # [m] --> [0.1 mm]
+            corrds_in_one_tenth_of_mm = (
+                int(round(position_in_one_tenth_of_mm.x)),
+                int(round(position_in_one_tenth_of_mm.y)),
+                int(round(position_in_one_tenth_of_mm.z)),
+            )
+            coords, coords_hp = zip(
+                *(divmod(coord, 100) for coord in corrds_in_one_tenth_of_mm)
             )
             flags = 0x02  # 2 = fixed position
             fixed_accuracy = max(
@@ -212,22 +215,23 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
             min_accuracy = 0
         else:
             coords = 0, 0, 0
+            coords_hp = 0, 0, 0
             flags = 0x01  # 1 = self-survey
             fixed_accuracy = 0
             min_accuracy = max(
                 int(round(self.settings.accuracy * 10000)), 1
             )  # [m] --> [0.1 mm]
         payload = pack(
-            "<BBHiiiiiiBBIIQ",
+            "<BBHiiibbbBIIIQ",
             0,  # version
             0,  # reserved 1
             flags,
             coords[0],  # ECEF coordinate X
             coords[1],  # ECEF coordinate Y
             coords[2],  # ECEF coordinate Z
-            0,  # ECEF coordinate X (high-precision)
-            0,  # ECEF coordinate Y (high-precision)
-            0,  # ECEF coordinate Z (high-precision)
+            coords_hp[0],  # ECEF coordinate X (high-precision part)
+            coords_hp[1],  # ECEF coordinate Y (high-precision part)
+            coords_hp[2],  # ECEF coordinate Z (high-precision part)
             0,  # reserved 2
             fixed_accuracy,  # fixed-pos 3D accuracy
             # Survey-in minimum duration [sec]
