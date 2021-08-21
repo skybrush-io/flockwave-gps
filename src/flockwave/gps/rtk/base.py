@@ -65,6 +65,13 @@ class RTKSurveySettings:
             )
         return result
 
+    @property
+    def is_position_fixed(self) -> bool:
+        """Returns whether the position of the RTK base station is fixed in this
+        configuration.
+        """
+        return self.position is not None
+
     def reset_to_defaults(self) -> None:
         """Resets the settings object to the defaults that are used when
         constructing the object with no arguments.
