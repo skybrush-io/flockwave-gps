@@ -14,10 +14,9 @@ bitstring = "^3.1.7"
 pynmea2 = "^1.15.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.4.3"
+pytest = "^6.2.5"
 coverage = {extras = ["toml"], version = "^5.2"}
 pytest-cov = "^2.10.0"
-black = {version = "^20.8b1", allow-prereleases = true}
 
 [tool.poetry.extras]
 ntrip = ["trio"]
