@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Callable, Dict, Tuple
 
-from .enums import UBXClass
+from .enums import UBXClass, UBXNAVSubclass
 from .utils import calculate_ubx_checksum
 
 __all__ = ("UBX", "UBXPacket")
@@ -48,9 +48,10 @@ _ubx_message_class_and_subclass_map: Dict[str, Tuple[UBXClass, int]] = {
     "CFG_TMODE3": (UBXClass.CFG, 0x71),
     "MON_HW": (UBXClass.MON, 9),
     "MON_VER": (UBXClass.MON, 4),
-    "NAV_PVT": (UBXClass.NAV, 0x07),
-    "NAV_SVIN": (UBXClass.NAV, 0x3B),
-    "NAV_VELNED": (UBXClass.NAV, 0x12),
+    "NAV_PVT": (UBXClass.NAV, UBXNAVSubclass.PVT),
+    "NAV_SVIN": (UBXClass.NAV, UBXNAVSubclass.SVIN),
+    "NAV_VELNED": (UBXClass.NAV, UBXNAVSubclass.VELNED),
+    "NAV_TIMEUTC": (UBXClass.NAV, UBXNAVSubclass.TIMEUTC),
     "RXM_RAW": (UBXClass.RXM, 0x15),
     "RXM_RAWX": (UBXClass.RXM, 0x10),
     "RXM_SFRB": (UBXClass.RXM, 0x11),

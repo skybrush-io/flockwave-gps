@@ -181,3 +181,10 @@ class RTKBaseConfigurator(metaclass=ABCMeta):
                 other tasks. Takes the number of seconds to sleep.
         """
         raise NotImplementedError  # pragma: no cover
+
+    @property
+    def settings(self) -> RTKSurveySettings:
+        """The RTK surve settings that the configurator will attempt to
+        set up.
+        """
+        return self._settings

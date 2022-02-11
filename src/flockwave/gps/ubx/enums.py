@@ -2,7 +2,7 @@
 
 from enum import IntEnum
 
-__all__ = ("UBXClass",)
+__all__ = ("UBXClass", "UBXNAVSubclass")
 
 
 class UBXClass(IntEnum):
@@ -25,3 +25,12 @@ class UBXClass(IntEnum):
 
     NMEA = 0xF0
     RTCM3 = 0xF5
+
+
+class UBXNAVSubclass(IntEnum):
+    """U-Blox NAV-... message subclass identifiers."""
+
+    PVT = 0x07
+    VELNED = 0x12
+    SVIN = 0x3B
+    TIMEUTC = 0x21

@@ -9,7 +9,8 @@ from flockwave.gps.enums import GNSSType
 from flockwave.gps.rtk import RTKBaseConfigurator, RTKMessageSet, RTKSurveySettings
 
 from .encoder import create_ubx_encoder
-from .packet import UBX, UBXClass
+from .enums import UBXClass, UBXNAVSubclass
+from .packet import UBX
 
 __all__ = ("UBXRTKBaseConfigurator",)
 
@@ -18,12 +19,6 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
     """Class that knows how to configure a U-blox GPS receiver as an RTK
     base station, optionally with given survey-in duration and accuracy.
     """
-
-    settings: RTKSurveySettings
-
-    def __init__(self, settings: RTKSurveySettings):
-        """Constructor."""
-        self.settings = settings
 
     async def run(
         self,
@@ -131,9 +126,13 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
         # Request receiver version
         await send(UBX.MON_VER(b""))
 
+        # Request UTC time information so we can warn the user if the clock of
+        # the computer is not in sync with GPS time
+        await set_message_rate(UBXClass.NAV, UBXNAVSubclass.TIMEUTC, 5)
+
         # Request survey-in data so we can provide feedback to the user about the
         # survey-in procedure
-        await set_message_rate(UBXClass.NAV, 0x3B, 1)
+        await set_message_rate(UBXClass.NAV, UBXNAVSubclass.SVIN, 1)
 
         # Request RTCM3 antenna position (1005) messages every 5 seconds
         await set_message_rate(UBXClass.RTCM3, 5, 5)
@@ -187,8 +186,8 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
         await set_message_rate(UBXClass.RTCM3, 254, 0)
 
         # Turn off other unneeded UBX messages
-        await set_message_rate(UBXClass.NAV, 0x07, 0)
-        await set_message_rate(UBXClass.NAV, 0x12, 0)
+        await set_message_rate(UBXClass.NAV, UBXNAVSubclass.PVT, 0)
+        await set_message_rate(UBXClass.NAV, UBXNAVSubclass.VELNED, 0)
         await set_message_rate(UBXClass.RXM, 0x13, 0)
         await set_message_rate(UBXClass.RXM, 0x15, 0)
         await set_message_rate(UBXClass.MON, 0x09, 0)
