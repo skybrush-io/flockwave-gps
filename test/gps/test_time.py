@@ -52,4 +52,3 @@ def test_gps_time_of_week_to_utc():
 def test_unix_to_gps_time_of_week():
     assert unix_to_gps_time_of_week(1603722481) == (2129, 138499)
     assert unix_to_gps_time_of_week(1614653594) == (2147, 183212)
-

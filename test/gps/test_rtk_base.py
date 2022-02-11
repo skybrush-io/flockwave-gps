@@ -61,7 +61,12 @@ def test_rtk_survey_settings_reset():
 def test_rtk_survey_settings_update_from_json():
     settings = RTKSurveySettings()
     settings.update_from_json(
-        {"duration": 240, "accuracy": 0.5, "gnssTypes": ["gps", "glonass"], "position": [4120354, 1418752, 4641855]}
+        {
+            "duration": 240,
+            "accuracy": 0.5,
+            "gnssTypes": ["gps", "glonass"],
+            "position": [4120354, 1418752, 4641855],
+        }
     )
 
     assert settings.duration == 240
