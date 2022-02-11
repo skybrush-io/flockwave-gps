@@ -9,7 +9,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-trio = {version = ">=0.15", optional = true}
+trio = {version = ">=0.19", optional = true}
 bitstring = "^3.1.7"
 pynmea2 = "^1.15.0"
 
