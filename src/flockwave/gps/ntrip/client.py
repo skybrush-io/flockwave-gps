@@ -219,7 +219,10 @@ def ntrip_streamer(url, username, password):
     www.euref-ip.net/BUTE0, ntrip://ntrip.use-snip.com/RTCM3EPH,
     ntrip1://152.66.6.49/RTCM23
     """
-    from trio import run
+    try:
+        from trio import run
+    except ImportError:
+        raise ImportError("You need to install 'trio' to use the NTRIP streamer")
 
     client = NtripClient.create(url, username=username, password=password)
 
@@ -237,4 +240,4 @@ def ntrip_streamer(url, username, password):
 
 
 if __name__ == "__main__":
-    ntrip_streamer()
+    ntrip_streamer()  # type: ignore

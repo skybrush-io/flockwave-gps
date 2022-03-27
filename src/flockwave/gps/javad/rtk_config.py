@@ -135,8 +135,12 @@ class JavadRTKBaseConfigurator(RTKBaseConfigurator):
 
 
 def test_rtk_base_configuration() -> None:
-    from trio import open_nursery, run, sleep
     from sys import argv
+
+    try:
+        from trio import open_nursery, run, sleep
+    except ImportError:
+        raise ImportError("You need to install 'trio' to run this test")
 
     async def main() -> None:
         from flockwave.connections.serial import SerialPortStream

@@ -2,7 +2,7 @@
 receiver.
 """
 
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, Optional
 
 from .nmea.parser import NMEAParser
 from .rtcm.parsers import RTCMV2Parser, RTCMV3Parser
@@ -11,7 +11,7 @@ from .ubx.parser import UBXParser
 __all__ = ("create_gps_parser",)
 
 
-_parser_factories = {
+_parser_factories: Dict[str, Callable[[], Any]] = {
     "nmea": NMEAParser,
     "rtcm2": RTCMV2Parser,
     "rtcm3": RTCMV3Parser,

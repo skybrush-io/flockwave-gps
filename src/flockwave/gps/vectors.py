@@ -23,7 +23,7 @@ C2 = TypeVar("C2", bound="GPSCoordinate")
 C3 = TypeVar("C3", bound="FlatEarthCoordinate")
 
 
-class AltitudeMixin(object):
+class AltitudeMixin:
     """Mixin class for objects that have an altitude component. Provides
     an ``amsl`` (altitude above mean sea level) and an ``agl`` (altitude
     above ground level) property with appropriate getters and setters.
@@ -661,8 +661,8 @@ class ECEFToGPSCoordinateTransformation:
         """Recalculates some cached values that are re-used across different
         transformations.
         """
-        self._eq_radius_sq = self._eq_radius ** 2
-        self._polar_radius_sq = self._polar_radius ** 2
+        self._eq_radius_sq = self._eq_radius**2
+        self._polar_radius_sq = self._polar_radius**2
         self._ecc_sq = 1 - self._polar_radius_sq / self._eq_radius_sq
         self._ep_sq_times_polar_radius = (
             self._eq_radius_sq - self._polar_radius_sq
@@ -705,7 +705,7 @@ class ECEFToGPSCoordinateTransformation:
             the converted coordinate
         """
         x, y, z = coord.x, coord.y, coord.z
-        p = sqrt(x ** 2 + y ** 2)
+        p = sqrt(x**2 + y**2)
         th = atan2(self._eq_radius * z, self._polar_radius * p)
         lon = atan2(y, x)
         lat = atan2(
@@ -718,7 +718,7 @@ class ECEFToGPSCoordinateTransformation:
         return GPSCoordinate(lat=lat, lon=lon, amsl=amsl)
 
 
-class FlatEarthToGPSCoordinateTransformation(object):
+class FlatEarthToGPSCoordinateTransformation:
     """Transformation that converts flat Earth coordinates to GPS
     coordinates and vice versa.
     """
@@ -733,7 +733,7 @@ class FlatEarthToGPSCoordinateTransformation(object):
     _cos_alpha: float
 
     @staticmethod
-    def _normalize_type(type):
+    def _normalize_type(type: str) -> str:
         """Returns the normalized name of the given coordinate system type.
 
         Raises:
@@ -845,7 +845,7 @@ class FlatEarthToGPSCoordinateTransformation(object):
         origin_lat_in_radians = radians(self._origin_lat)
 
         x = 1 - eccentricity_sq * (sin(origin_lat_in_radians) ** 2)
-        self._r1 = earth_radius * (1 - eccentricity_sq) / (x ** 1.5)
+        self._r1 = earth_radius * (1 - eccentricity_sq) / (x**1.5)
         self._r2_over_cos_origin_lat_in_radians = (
             earth_radius / sqrt(x) * cos(origin_lat_in_radians)
         )

@@ -1,10 +1,14 @@
 """Simple HTTP response object for the low-level HTTP library."""
 
-from trio.abc import ReceiveStream
-from typing import Dict, Generator, Optional
+from __future__ import annotations
+
+from typing import Dict, Generator, Optional, TYPE_CHECKING
 
 from .dechunkers import Dechunker, NullDechunker, ResponseDechunker
 from .errors import AccessDeniedError, AuthenticationNeededError, ResponseError
+
+if TYPE_CHECKING:
+    from trio.abc import ReceiveStream
 
 __all__ = ("Response",)
 
@@ -14,11 +18,11 @@ class LineReader:
     out of it.
     """
 
-    stream: ReceiveStream
+    stream: "ReceiveStream"
     _buffer: bytearray
     _line_generator: Generator[Optional[bytes], Optional[bytes], None]
 
-    def __init__(self, stream: ReceiveStream, max_line_length: int = 16384):
+    def __init__(self, stream: "ReceiveStream", max_line_length: int = 16384):
         self.stream = stream
 
         self._buffer = bytearray()
