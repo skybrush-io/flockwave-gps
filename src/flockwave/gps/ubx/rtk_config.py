@@ -199,13 +199,13 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
         position = self.settings.position
         if position is not None:
             position_in_one_tenth_of_mm = position * 10000  # [m] --> [0.1 mm]
-            corrds_in_one_tenth_of_mm = (
+            coords_in_one_tenth_of_mm = (
                 int(round(position_in_one_tenth_of_mm.x)),
                 int(round(position_in_one_tenth_of_mm.y)),
                 int(round(position_in_one_tenth_of_mm.z)),
             )
             coords, coords_hp = zip(
-                *(divmod(coord, 100) for coord in corrds_in_one_tenth_of_mm)
+                *(divmod(coord, 100) for coord in coords_in_one_tenth_of_mm)
             )
             flags = 0x02  # 2 = fixed position
             fixed_accuracy = max(
