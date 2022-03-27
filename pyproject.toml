@@ -24,6 +24,7 @@ ntrip = ["trio"]
 [[tool.poetry.source]]
 name = "collmot"
 url = "https://pypi.collmot.com/simple/"
+secondary = true
 
 [tool.coverage.paths]
 source = ["src"]
