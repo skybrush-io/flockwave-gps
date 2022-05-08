@@ -136,7 +136,7 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
             scaled_prc = bitstream.read(16).intbe
             scaled_prrc = bitstream.read(8).int
             iode = bitstream.read(8).uint
-            multiplier = 16 ** scale_factor
+            multiplier = 16**scale_factor
             prc = scaled_prc * multiplier
             prrc = scaled_prrc * multiplier
             correction = CorrectionData(svid=svid, prc=prc, prrc=prrc, iode=iode)
@@ -998,37 +998,37 @@ class RTCMV3GPSEphemerisPacket(RTCMV3Packet):
         this packet.
         """
         params = {
-            "cuc": self.cuc / (2 ** 29),
-            "cus": self.cus / (2 ** 29),
-            "cic": self.cic / (2 ** 29),
-            "cis": self.cis / (2 ** 29),
-            "crc": self.crc / (2 ** 5),
-            "crs": self.crs / (2 ** 5),
+            "cuc": self.cuc / (2**29),
+            "cus": self.cus / (2**29),
+            "cic": self.cic / (2**29),
+            "cis": self.cis / (2**29),
+            "crc": self.crc / (2**5),
+            "crs": self.crs / (2**5),
             # Group delay differential between L1 and L2 [s]
-            "tgd": self.tgd / (2 ** 31),
+            "tgd": self.tgd / (2**31),
             # Polynomial clock correction coefficient [s]
-            "af0": self.af0 / (2 ** 31),
+            "af0": self.af0 / (2**31),
             # Polynomial clock correction coefficient [s/s]
-            "af1": self.af1 / (2 ** 43),
+            "af1": self.af1 / (2**43),
             # Polynomial clock correction coefficient [s/s^2]
-            "af2": self.af2 / (2 ** 55),
+            "af2": self.af2 / (2**55),
             # Time of week [s]
-            "toe": self.toe * (2 ** 4),
+            "toe": self.toe * (2**4),
             # Clock reference time of week [s]
-            "toc": self.toc * (2 ** 4),
+            "toc": self.toc * (2**4),
             # Mean motion difference from computed value [rad]
-            "delta_n": self.delta_n * GPS_PI / (2 ** 43),
+            "delta_n": self.delta_n * GPS_PI / (2**43),
             # Mean anomaly at reference time [rad]
-            "m0": self.m0 * GPS_PI / (2 ** 31),
+            "m0": self.m0 * GPS_PI / (2**31),
             # Eccentricity of satellite orbit
-            "eccentricity": self.eccentricity / (2 ** 33),
+            "eccentricity": self.eccentricity / (2**33),
             # Square root of the semi-major axis of the orbit
-            "sqrt_a": self.sqrt_a / (2 ** 19),
-            "omega0": self.omega0 * GPS_PI / (2 ** 31),
-            "i0": self.i0 * GPS_PI / (2 ** 31),
-            "omega": self.omega * GPS_PI / (2 ** 31),
-            "omega_dot": self.omega_dot * GPS_PI / (2 ** 43),
-            "i_dot": self.i_dot * GPS_PI / (2 ** 43),
+            "sqrt_a": self.sqrt_a / (2**19),
+            "omega0": self.omega0 * GPS_PI / (2**31),
+            "i0": self.i0 * GPS_PI / (2**31),
+            "omega": self.omega * GPS_PI / (2**31),
+            "omega_dot": self.omega_dot * GPS_PI / (2**43),
+            "i_dot": self.i_dot * GPS_PI / (2**43),
             "iodc": self.iodc,
             "iode": self.iode,
             "week": self.week,

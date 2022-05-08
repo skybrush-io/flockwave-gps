@@ -32,7 +32,7 @@ class EphemerisData(_EphemerisData):
 
     @property
     def a(self):  # noqa
-        return self.sqrt_a ** 2
+        return self.sqrt_a**2
 
     def calculate_satellite_position(self, transmit_time=0, time_of_flight=0):
         """Calculates the position of the satellite in ECEF coordinates from
@@ -59,7 +59,7 @@ class EphemerisData(_EphemerisData):
         elif T < -half_week:
             T = T + 2 * half_week
 
-        n = sqrt(mu / (self.sqrt_a ** 6)) + self.delta_n
+        n = sqrt(mu / (self.sqrt_a**6)) + self.delta_n
         ecc = self.eccentricity
 
         # Kepler equation
@@ -77,7 +77,7 @@ class EphemerisData(_EphemerisData):
             )
 
         sin_e, cos_e = sin(E), cos(E)
-        snu = sqrt(1 - ecc ** 2) * sin_e / (1 - ecc * cos_e)
+        snu = sqrt(1 - ecc**2) * sin_e / (1 - ecc * cos_e)
         cnu = (cos_e - ecc) / (1 - ecc * cos_e)
 
         # The paragraph below is basically equivalent to
