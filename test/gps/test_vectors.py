@@ -74,6 +74,15 @@ class JSONFormatTest(unittest.TestCase):
         self.assertEqual(1, vec.lat)
         self.assertEqual(4, vec.lon)
         self.assertEqual(9, vec.amsl)
+        self.assertEqual(None, vec.ahl)
+        self.assertEqual(None, vec.agl)
+
+        vec = GPSCoordinate(lat=1, lon=4, ahl=9)
+        vec = GPSCoordinate.from_json(vec.json)
+        self.assertEqual(1, vec.lat)
+        self.assertEqual(4, vec.lon)
+        self.assertEqual(None, vec.amsl)
+        self.assertEqual(9, vec.ahl)
         self.assertEqual(None, vec.agl)
 
         vec = GPSCoordinate(lat=1, lon=4, agl=9)
@@ -81,6 +90,7 @@ class JSONFormatTest(unittest.TestCase):
         self.assertEqual(1, vec.lat)
         self.assertEqual(4, vec.lon)
         self.assertEqual(None, vec.amsl)
+        self.assertEqual(None, vec.ahl)
         self.assertEqual(9, vec.agl)
 
 
@@ -125,6 +135,7 @@ class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
         self.assertAlmostEqual(49, gps_coord.lat, places=5)
         self.assertAlmostEqual(17, gps_coord.lon, places=5)
         self.assertAlmostEqual(1000, gps_coord.amsl, places=0)
+        self.assertTrue(gps_coord.ahl is None)
         self.assertTrue(gps_coord.agl is None)
 
 

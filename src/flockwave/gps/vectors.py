@@ -25,23 +25,32 @@ C3 = TypeVar("C3", bound="FlatEarthCoordinate")
 
 class AltitudeMixin:
     """Mixin class for objects that have an altitude component. Provides
-    an ``amsl`` (altitude above mean sea level) and an ``agl`` (altitude
-    above ground level) property with appropriate getters and setters.
+    an ``amsl`` (altitude above mean sea level), an ``ahl`` (altitude above
+    home level) and an ``agl`` (altitude above ground level) property with
+    appropriate getters and setters.
     """
 
     _agl: Optional[float]
+    _ahl: Optional[float]
     _amsl: Optional[float]
 
-    def __init__(self, amsl: Optional[float] = None, agl: Optional[float] = None):
+    def __init__(
+        self,
+        amsl: Optional[float] = None,
+        ahl: Optional[float] = None,
+        agl: Optional[float] = None,
+    ):
         """Constructor."""
         self._agl = None
+        self._ahl = None
         self._amsl = None
         self.agl = agl
+        self.ahl = ahl
         self.amsl = amsl
 
     @property
     def agl(self) -> Optional[float]:
-        """The altitude above ground level."""
+        """The relative altitude above ground level."""
         return self._agl
 
     @agl.setter
@@ -49,8 +58,17 @@ class AltitudeMixin:
         self._agl = float(value) if value is not None else None
 
     @property
+    def ahl(self) -> Optional[float]:
+        """The relative altitude above home level."""
+        return self._ahl
+
+    @ahl.setter
+    def ahl(self, value: Optional[float]) -> None:
+        self._ahl = float(value) if value is not None else None
+
+    @property
     def amsl(self) -> Optional[float]:
-        """The altitude above mean sea level."""
+        """The absolute altitude above mean sea level."""
         return self._amsl
 
     @amsl.setter
@@ -385,7 +403,8 @@ class GPSCoordinate(AltitudeMixin):
             lat=data[0] * 1e-7,
             lon=data[1] * 1e-7,
             amsl=data[2] * 1e-3 if length > 2 and data[2] is not None else None,
-            agl=data[3] * 1e-3 if length > 3 and data[3] is not None else None,
+            ahl=data[3] * 1e-3 if length > 3 and data[3] is not None else None,
+            agl=data[4] * 1e-3 if length > 4 and data[4] is not None else None,
         )
 
     def __init__(
@@ -393,6 +412,7 @@ class GPSCoordinate(AltitudeMixin):
         lat: float = 0.0,
         lon: float = 0.0,
         amsl: Optional[float] = None,
+        ahl: Optional[float] = None,
         agl: Optional[float] = None,
     ):
         """Constructor.
@@ -401,26 +421,35 @@ class GPSCoordinate(AltitudeMixin):
             lat: the latitude
             lon: the longitude
             amsl: the altitude above mean sea level, if known
+            ahl: the altitude above home level, if known
             agl: the altitude above ground level, if known
         """
-        AltitudeMixin.__init__(self, amsl=amsl, agl=agl)
+        AltitudeMixin.__init__(self, amsl=amsl, ahl=ahl, agl=agl)
         self._lat, self._lon = 0.0, 0.0
         self.lat = float(lat)
         self.lon = float(lon)
 
     def copy(self: C2) -> C2:
         """Returns a copy of the current GPS coordinate object."""
-        return self.__class__(lat=self.lat, lon=self.lon, amsl=self.amsl, agl=self.agl)
+        return self.__class__(
+            lat=self.lat, lon=self.lon, amsl=self.amsl, ahl=self.ahl, agl=self.agl
+        )
 
     @property
     def json(self):
         """Returns the JSON representation of the coordinate."""
-        return [
+        retval = [
             int(round(self._lat * 1e7)),
             int(round(self._lon * 1e7)),
             int(round(self._amsl * 1e3)) if self._amsl is not None else None,
-            int(round(self._agl * 1e3)) if self._agl is not None else None,
+            int(round(self._ahl * 1e3)) if self._ahl is not None else None,
         ]
+        # for back-compatibility reasons we allow a list of only 4 elements,
+        # and use 5-element list only when AGL altitude is explicitly given
+        if self._agl is not None:
+            retval.append(int(round(self._agl * 1e3)))
+
+        return retval
 
     @property
     def lat(self) -> float:
@@ -455,6 +484,7 @@ class GPSCoordinate(AltitudeMixin):
         lat: Optional[float] = None,
         lon: Optional[float] = None,
         amsl: Optional[float] = None,
+        ahl: Optional[float] = None,
         agl: Optional[float] = None,
         precision: Optional[int] = None,
     ) -> None:
@@ -465,6 +495,8 @@ class GPSCoordinate(AltitudeMixin):
             lon: the new longitude; `None` means to leave the current value intact.
             amsl: the new altitude above mean sea level; `None` means to leave
                 the current value intact.
+            ahl: the new altitude above home level; `None` means to leave the
+                current value intact.
             agl: the new altitude above ground level; `None` means to leave the
                 current value intact.
             precision: the number of decimal digits to round the latitude and
@@ -476,6 +508,8 @@ class GPSCoordinate(AltitudeMixin):
             self.lon = lon
         if amsl is not None:
             self.amsl = amsl
+        if ahl is not None:
+            self.ahl = ahl
         if agl is not None:
             self.agl = agl
         if precision is not None:
@@ -496,6 +530,7 @@ class GPSCoordinate(AltitudeMixin):
             lat=other.lat,
             lon=other.lon,
             amsl=other.amsl,
+            ahl=other.ahl,
             agl=other.agl,
             precision=precision,
         )
@@ -515,7 +550,8 @@ class FlatEarthCoordinate(AltitudeMixin):
             x=data[0] * 1e-3,
             y=data[1] * 1e-3,
             amsl=data[2] * 1e-3 if length > 2 and data[2] is not None else None,
-            agl=data[3] * 1e-3 if length > 3 and data[3] is not None else None,
+            ahl=data[3] * 1e-3 if length > 3 and data[3] is not None else None,
+            agl=data[4] * 1e-3 if length > 4 and data[4] is not None else None,
         )
 
     def __init__(
@@ -523,6 +559,7 @@ class FlatEarthCoordinate(AltitudeMixin):
         x: float = 0.0,
         y: float = 0.0,
         amsl: Optional[float] = None,
+        ahl: Optional[float] = None,
         agl: Optional[float] = None,
     ):
         """Constructor.
@@ -531,26 +568,35 @@ class FlatEarthCoordinate(AltitudeMixin):
             x: the X coordinate
             y: the Y coordinate
             amsl: the altitude above mean sea level, if known
+            ahl: the altitude above home level, if known
             agl: the altitude above ground level, if known
         """
-        AltitudeMixin.__init__(self, amsl=amsl, agl=agl)
+        AltitudeMixin.__init__(self, amsl=amsl, ahl=ahl, agl=agl)
         self._x, self._y = 0.0, 0.0
         self.x = x
         self.y = y
 
     def copy(self: C3) -> C3:
         """Returns a copy of the current flat Earth coordinate object."""
-        return self.__class__(x=self.x, y=self.y, amsl=self.amsl, agl=self.agl)
+        return self.__class__(
+            x=self.x, y=self.y, amsl=self.amsl, ahl=self.ahl, agl=self.agl
+        )
 
     @property
     def json(self):
         """Returns the JSON representation of the coordinate."""
-        return [
+        retval = [
             int(round(self._x * 1e3)),
             int(round(self._y * 1e3)),
             int(round(self._amsl * 1e3)) if self._amsl is not None else None,
-            int(round(self._agl * 1e3)) if self._agl is not None else None,
+            int(round(self._ahl * 1e3)) if self._ahl is not None else None,
         ]
+        # for back-compatibility reasons we allow a list of only 4 elements,
+        # and use 5-element list only when AGL altitude is explicitly given
+        if self._agl is not None:
+            retval.append(int(round(self._agl * 1e3)))
+
+        return retval
 
     def round(self, precision: int) -> None:
         """Rounds the X and Y coordinates of the vector to the given
@@ -567,6 +613,7 @@ class FlatEarthCoordinate(AltitudeMixin):
         x: Optional[float] = None,
         y: Optional[float] = None,
         amsl: Optional[float] = None,
+        ahl: Optional[float] = None,
         agl: Optional[float] = None,
         precision: Optional[int] = None,
     ) -> None:
@@ -577,6 +624,8 @@ class FlatEarthCoordinate(AltitudeMixin):
             y: the new Y coordinate; `None` means to leave the current value intact.
             amsl: the new altitude above mean sea level; `None` means to leave
                 the current value intact.
+            ahl: the new altitude above home level; `None` means to leave the
+                current value intact.
             agl: the new altitude above ground level; `None` means to leave the
                 current value intact.
             precision: the number of decimal digits to round the X and Y
@@ -588,6 +637,8 @@ class FlatEarthCoordinate(AltitudeMixin):
             self.y = y
         if amsl is not None:
             self.amsl = amsl
+        if ahl is not None:
+            self.ahl = ahl
         if agl is not None:
             self.agl = agl
         if precision is not None:
@@ -603,7 +654,12 @@ class FlatEarthCoordinate(AltitudeMixin):
                 coordinates to; ``None`` means to take the values as they are
         """
         self.update(
-            x=other.x, y=other.y, amsl=other.amsl, agl=other.agl, precision=precision
+            x=other.x,
+            y=other.y,
+            amsl=other.amsl,
+            ahl=other.ahl,
+            agl=other.agl,
+            precision=precision,
         )
 
     @property
@@ -879,6 +935,7 @@ class FlatEarthToGPSCoordinateTransformation:
             x=x * self._xmul,
             y=y * self._ymul,
             amsl=coord.amsl * self._zmul if coord.amsl is not None else None,
+            ahl=coord.ahl * self._zmul if coord.ahl is not None else None,
             agl=coord.agl * self._zmul if coord.agl is not None else None,
         )
 
@@ -905,5 +962,6 @@ class FlatEarthToGPSCoordinateTransformation:
             lat=lat + self._origin_lat,
             lon=lon + self._origin_lon,
             amsl=coord.amsl * self._zmul if coord.amsl is not None else None,
+            ahl=coord.ahl * self._zmul if coord.ahl is not None else None,
             agl=coord.agl * self._zmul if coord.agl is not None else None,
         )
