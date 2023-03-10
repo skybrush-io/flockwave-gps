@@ -6,7 +6,7 @@ from typing import Optional
 
 from trio.abc import ReceiveStream
 
-__all__ = ("PushbackStreamWrapper", )
+__all__ = ("PushbackStreamWrapper",)
 
 
 class PushbackStreamWrapper(ReceiveStream):
@@ -43,5 +43,3 @@ class PushbackStreamWrapper(ReceiveStream):
             return result
 
         return await self._stream.receive_some(max_bytes)  # type: ignore
-
-

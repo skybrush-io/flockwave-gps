@@ -137,7 +137,7 @@ class Response:
                 self._headers[key.decode("ascii").capitalize()] = value.lstrip()
 
         from ._lazy_deps import PushbackStreamWrapper
-    
+
         self._stream = PushbackStreamWrapper(self._stream)
         self._stream.push_back(self._line_reader.get_remainder())
 
