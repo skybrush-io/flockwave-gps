@@ -5,10 +5,13 @@ import sys
 
 from base64 import b64encode
 from dataclasses import dataclass, replace
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from urllib.parse import urlparse
 
 from flockwave.gps.http import Request
+
+if TYPE_CHECKING:
+    from flockwave.gps.http import Response
 
 from .errors import InvalidResponseError
 
@@ -156,11 +159,11 @@ class NtripClient:
         await response.ensure_headers_processed()
 
         if response.protocol != b"ICY":
-            self._check_header(response, "Content-type", "gnss/data")
+            self._check_header(response, "Content-type", b"gnss/data")
 
         return response
 
-    def _check_header(self, response, header, value):
+    def _check_header(self, response: "Response", header: str, value: bytes):
         """Checks whether the given HTTP response contains the given header
         with the given value.
         """
