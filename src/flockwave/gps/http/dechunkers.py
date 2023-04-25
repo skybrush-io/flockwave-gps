@@ -70,7 +70,7 @@ class ResponseDechunker(Dechunker):
 
     def _feed_byte(self, byte: int) -> Optional[int]:
         if self._state == ResponseDechunkerState.START:
-            if byte == b"\r":
+            if byte == 13:
                 self._state = ResponseDechunkerState.HEADER_ENDING
             else:
                 try:
@@ -78,14 +78,14 @@ class ResponseDechunker(Dechunker):
                 except ValueError:
                     raise ValueError(
                         "chunked transfer encoding protocol "
-                        "violation; got {0!r} when expecting a "
+                        "violation; got char with code {0} when expecting a "
                         "hexadecimal number".format(byte)
                     )
         elif self._state == ResponseDechunkerState.HEADER_ENDING:
-            if byte != b"\n":
+            if byte != 10:
                 raise ValueError(
                     "chunked transfer encoding protocol "
-                    "violation; got {0!r} when expecting '\\n'".format(byte)
+                    "violation; got char with code {0} when expecting 10".format(byte)
                 )
             self._state = ResponseDechunkerState.BODY
         elif self._state == ResponseDechunkerState.BODY:
@@ -93,19 +93,19 @@ class ResponseDechunker(Dechunker):
                 self._chunk_length -= 1
                 return byte
             else:
-                if byte != b"\r":
+                if byte != 13:
                     raise ValueError(
                         "chunked transfer encoding protocol "
-                        "violation; got {0!r} when expecting "
-                        "'\\r'".format(byte)
+                        "violation; got char with code {0!r} when expecting "
+                        "13".format(byte)
                     )
                 self._state = ResponseDechunkerState.BODY_ENDING
         elif self._state == ResponseDechunkerState.BODY_ENDING:
-            if byte != b"\n":
+            if byte != 10:
                 raise ValueError(
                     "chunked transfer encoding protocol "
-                    "violation; got {0!r} when expecting "
-                    "'\\n'".format(byte)
+                    "violation; got char with code {0!r} when expecting "
+                    "10".format(byte)
                 )
             self.reset()
         else:
