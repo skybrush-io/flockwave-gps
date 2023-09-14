@@ -133,7 +133,7 @@ class RTKSurveySettings:
             elif position is None:
                 self.position = None
             elif isinstance(position, Iterable):
-                self.position = ECEFCoordinate(*tuple(position)[:3])
+                self.position = ECEFCoordinate.from_json(position)
             else:
                 raise ValueError("invalid base station position")
 

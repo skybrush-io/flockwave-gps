@@ -65,7 +65,7 @@ def test_rtk_survey_settings_update_from_json():
             "duration": 240,
             "accuracy": 0.5,
             "gnssTypes": ["gps", "glonass"],
-            "position": [4120354, 1418752, 4641855],
+            "position": [4120354000, 1418752000, 4641855000],
         }
     )
 
