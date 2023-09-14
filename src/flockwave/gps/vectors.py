@@ -384,15 +384,6 @@ class ECEFCoordinate(Vector3D):
     be given in metres.
     """
 
-    @property
-    def json(self):
-        """Returns the JSON representation of the coordinate."""
-        return [
-            int(round(self._x * 1e3)),
-            int(round(self._y * 1e3)),
-            int(round(self._z * 1e3)),
-        ]  # [m] --> [mm]
-
     @classmethod
     def from_json(cls, data):
         """Creates an ECEF coordinate from its JSON representation."""
@@ -401,6 +392,15 @@ class ECEFCoordinate(Vector3D):
             y=data[1] * 1e-3,
             z=data[2] * 1e-3,
         )  # [mm] -> [m]
+
+    @property
+    def json(self):
+        """Returns the JSON representation of the coordinate."""
+        return [
+            int(round(self.x * 1e3)),
+            int(round(self.y * 1e3)),
+            int(round(self.z * 1e3)),
+        ]  # [m] --> [mm]
 
 
 class GPSCoordinate(AltitudeMixin):
