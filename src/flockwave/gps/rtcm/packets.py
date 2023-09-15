@@ -236,7 +236,7 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
                 y=bitstream.read(32).intbe,
                 z=bitstream.read(32).intbe,
             )
-            / 100
+            / 100  # [cm] -> [m]
         )
 
         return cls(station_id=station_id, position=pos)
@@ -269,7 +269,7 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
         Parameters:
             bits (BitStream): the bit stream to append to
         """
-        pos = self.position * 100
+        pos = self.position * 100  # [m] -> [cm]
         # uints must be encoded as big-endian
         bits += pack("intbe:32, intbe:32, intbe:32", pos.x, pos.y, pos.z)
 
