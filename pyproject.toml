@@ -9,7 +9,7 @@ packages = [
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.9"
 trio = {version = "^0.22.0", optional = true}
 bitstring = "^4.0.1"
 pynmea2 = "^1.19.0"
