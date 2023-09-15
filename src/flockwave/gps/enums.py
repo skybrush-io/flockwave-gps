@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict
 
 __all__ = ("GNSSType",)
 
 
-_gnss_type_to_string: Dict["GNSSType", str] = {}
+_gnss_type_to_string: dict["GNSSType", str] = {}
 
 
 class GNSSType(Enum):

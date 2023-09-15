@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Callable, Iterable, List, Optional
+from typing import Callable, Iterable, Optional
 
 from .packet import UBXPacket
 from .utils import calculate_ubx_checksum
@@ -22,8 +22,8 @@ class UBXParserState(Enum):
 class UBXParser:
     """Stateful incremental UBX protocol parser."""
 
-    _buffer: List[int]
-    _chksum: List[Optional[int]]
+    _buffer: list[int]
+    _chksum: list[Optional[int]]
     _state: UBXParserState
     _bytes_needed: int
 

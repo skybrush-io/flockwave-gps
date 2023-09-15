@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, List
+from typing import Callable, Iterable
 
 from .packet import NMEAPacket
 
@@ -8,15 +8,15 @@ __all__ = ("create_nmea_parser",)
 class NMEAParser:
     """NMEA-0183 sentence parser."""
 
-    _buffer: List[bytes]
+    _buffer: list[bytes]
     _total: int
 
     def __init__(self):
         self._buffer = []
         self._total = 0
 
-    def feed(self, data: bytes) -> List[NMEAPacket]:
-        result: List[NMEAPacket] = []
+    def feed(self, data: bytes) -> list[NMEAPacket]:
+        result: list[NMEAPacket] = []
 
         while data:
             pre, sep, data = data.partition(b"\n")

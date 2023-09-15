@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from math import atan2, cos, degrees, radians, sin, sqrt
-from typing import Any, List, Optional, Tuple, TypeVar
+from typing import Any, Optional, TypeVar
 
 from .constants import WGS84
 
@@ -171,7 +171,7 @@ class Vector3D:
         self.update(other.x, other.y, other.z, precision=precision)
 
     @property
-    def json(self) -> List[float]:
+    def json(self) -> list[float]:
         """Returns the JSON representation of the coordinate."""
         return [self._x, self._y, self._z]
 
@@ -251,12 +251,12 @@ class PositionXYZ(Vector3D):
     """
 
     @classmethod
-    def from_json(cls, data: List[float]):
+    def from_json(cls, data: list[float]):
         """Creates an XYZ position vector from its JSON representation."""
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
     @Vector3D.json.getter
-    def json(self) -> List[int]:
+    def json(self) -> list[int]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -274,12 +274,12 @@ class VelocityXYZ(Vector3D):
     """
 
     @classmethod
-    def from_json(cls, data: List[float]):
+    def from_json(cls, data: list[float]):
         """Creates an XYZ position vector from its JSON representation."""
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
     @Vector3D.json.getter
-    def json(self) -> List[int]:
+    def json(self) -> list[int]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -299,7 +299,7 @@ class VelocityNED(Vector3D):
     """
 
     @classmethod
-    def from_json(cls, data: List[float]):
+    def from_json(cls, data: list[float]):
         """Creates a NED velocity vector from its JSON representation."""
         return cls(north=data[0] * 1e-3, east=data[1] * 1e-3, down=data[2] * 1e-3)
 
@@ -337,7 +337,7 @@ class VelocityNED(Vector3D):
         super().update(north, east, down, precision=precision)
 
     @Vector3D.json.getter
-    def json(self) -> List[int]:
+    def json(self) -> list[int]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -395,7 +395,7 @@ class ECEFCoordinate(Vector3D):
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
     @property
-    def json(self) -> List[int]:
+    def json(self) -> list[int]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -706,7 +706,7 @@ class ECEFToGPSCoordinateTransformation:
     _eq_radius: float
     _polar_radius: float
 
-    def __init__(self, radii: Optional[Tuple[float, float]] = None):
+    def __init__(self, radii: Optional[tuple[float, float]] = None):
         """Constructor.
 
         Parameters:
@@ -720,12 +720,12 @@ class ECEFToGPSCoordinateTransformation:
             self.radii = radii
 
     @property
-    def radii(self) -> Tuple[float, float]:
+    def radii(self) -> tuple[float, float]:
         """The equatorial and polar radius of the ellipsoid, in metres."""
         return self._eq_radius, self._polar_radius
 
     @radii.setter
-    def radii(self, value: Tuple[float, float]) -> None:
+    def radii(self, value: tuple[float, float]) -> None:
         self._eq_radius = float(value[0])
         self._polar_radius = float(value[1])
         self._recalculate()

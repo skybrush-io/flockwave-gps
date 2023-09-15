@@ -9,9 +9,7 @@ from typing import (
     Callable,
     Generic,
     Iterable,
-    List,
     Optional,
-    Tuple,
     TypeVar,
     Union,
 )
@@ -393,9 +391,9 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
     generates a packet will be used and the other will be discarded.
     """
 
-    _subparsers: List[RTCMParserBase[Any]]
+    _subparsers: list[RTCMParserBase[Any]]
     _chosen_subparser: Optional[RTCMParserBase[Any]]
-    _pending_checksum_errors: List[Tuple[RTCMParserBase, ChecksumError]]
+    _pending_checksum_errors: list[tuple[RTCMParserBase, ChecksumError]]
 
     def __init__(self, *args, **kwds):
         """Constructor."""
@@ -470,7 +468,7 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
 
     def _process_pending_checksum_errors(
         self,
-    ) -> Tuple[Iterable[RTCMPacket], Optional[RTCMParserBase]]:
+    ) -> tuple[Iterable[RTCMPacket], Optional[RTCMParserBase]]:
         """Processes unprocessed checksum errors from subparsers to see
         if any of the recovery attempts yield proper packets. Returns a
         list of the recovered packets, or an empty list if there was

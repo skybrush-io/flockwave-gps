@@ -1,7 +1,7 @@
 """Simple HTTP request object for the low-level HTTP library."""
 
 from io import BytesIO
-from typing import Dict, Optional, OrderedDict
+from typing import Optional, OrderedDict
 from urllib.parse import quote, urlparse
 
 from .response import Response
@@ -16,7 +16,7 @@ class Request:
     headers: OrderedDict[str, bytes]
 
     def __init__(
-        self, url: bytes, data: Optional[bytes] = None, headers: Dict[str, bytes] = None
+        self, url: bytes, data: Optional[bytes] = None, headers: dict[str, bytes] = None
     ):
         """Constructs a new HTTP request object.
 

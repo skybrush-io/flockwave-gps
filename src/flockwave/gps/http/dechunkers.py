@@ -4,7 +4,7 @@ normal byte stream.
 
 from abc import ABCMeta, abstractmethod
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 __all__ = ("NullDechunker", "ResponseDechunker")
 
@@ -55,7 +55,7 @@ class ResponseDechunker(Dechunker):
         Returns:
             bytes: the dechunked data
         """
-        result: List[int] = []
+        result: list[int] = []
         for byte in data:
             byte = self._feed_byte(byte)
             if byte is not None:

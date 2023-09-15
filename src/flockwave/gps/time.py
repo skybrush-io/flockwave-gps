@@ -6,7 +6,7 @@ converter at https://www.gw-openscience.org/gps/
 
 from bisect import bisect
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Tuple
+from typing import Optional
 
 __all__ = (
     "current_gps_week",
@@ -138,7 +138,7 @@ def datetime_to_gps_time(dt: datetime) -> float:
     return (date_before_leaps - GPS_EPOCH).total_seconds()
 
 
-def datetime_to_gps_time_of_week(dt: datetime) -> Tuple[int, float]:
+def datetime_to_gps_time_of_week(dt: datetime) -> tuple[int, float]:
     """Converts a timezone-aware datetime object into GPS time, expressed
     as the GPS week number and the number of seconds since the beginning of that
     GPS week.
@@ -153,7 +153,7 @@ def unix_to_gps_time(seconds: float) -> float:
     return seconds - GPS_EPOCH_TO_UNIX_EPOCH + leap_seconds_since_1980_unix(seconds)
 
 
-def unix_to_gps_time_of_week(seconds: float) -> Tuple[int, float]:
+def unix_to_gps_time_of_week(seconds: float) -> tuple[int, float]:
     """Converts a UNIX timestamp into GPS time, expressed as the GPS week number
     and the number of seconds since the beginning of that GPS week. Fractional
     seconds are ignored.

@@ -1,7 +1,7 @@
 """Helper functions for RTCM message decoding"""
 
 from operator import attrgetter
-from typing import Any, Iterable, List, Optional
+from typing import Any, Iterable, Optional
 
 __all__ = ("count_bits", "get_best_satellites")
 
@@ -31,18 +31,17 @@ def count_bits(value: int) -> int:
 
 def get_best_satellites(
     satellites: Iterable[Any], count: Optional[int] = None
-) -> List[Any]:
+) -> list[Any]:
     """Given a list of satellite objects, each of which having a `cnr`
     attribute containing the carrier-to-noise ratio, returns the ones that
     have the best carrier-to-noise ratio, in decreasing order.
 
     Parameters:
-        satellites (List[object]): list of satellites
-        count (Optional[int]): maximum number of satellites to return
+        satellites: list of satellites
+        count: maximum number of satellites to return
 
     Returns:
-        List[object]: a sorted list of satellites with the best
-            carrier-to-noise ratios
+        a sorted list of satellites with the best carrier-to-noise ratios
     """
     top = sorted(satellites, key=attrgetter("cnr"), reverse=True)
     if count is not None:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Generator, Optional, TYPE_CHECKING
+from typing import Generator, Optional, TYPE_CHECKING
 
 from .dechunkers import Dechunker, NullDechunker, ResponseDechunker
 from .errors import AccessDeniedError, AuthenticationNeededError, ResponseError
@@ -76,7 +76,7 @@ class Response:
     """
 
     _stream: "ReceiveStream"
-    _headers: Optional[Dict[str, bytes]]
+    _headers: Optional[dict[str, bytes]]
     _protocol: Optional[bytes]
     _dechunker: Optional[Dechunker]
     _line_reader: LineReader
@@ -170,7 +170,7 @@ class Response:
         return self._headers.get(header.capitalize(), default)
 
     @property
-    def headers(self) -> Dict[str, bytes]:
+    def headers(self) -> dict[str, bytes]:
         """Returns a dictionary containing the response headers,
         assuming that the headers are already processed.
 

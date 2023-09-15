@@ -2,7 +2,7 @@
 station.
 """
 
-from typing import Any, Awaitable, Callable, Dict
+from typing import Any, Awaitable, Callable
 
 from flockwave.gps.enums import GNSSType
 from flockwave.gps.rtk import RTKBaseConfigurator, RTKMessageSet, RTKSurveySettings
@@ -90,7 +90,7 @@ class JavadRTKBaseConfigurator(RTKBaseConfigurator):
         await set("/par/pos/fix/alt", False)
 
         # Enable RTCM3 messages
-        msg_intervals: Dict[int, int] = {1006: 5}
+        msg_intervals: dict[int, int] = {1006: 5}
         if self.settings.message_set is RTKMessageSet.MSM7:
             offset = 7
         else:

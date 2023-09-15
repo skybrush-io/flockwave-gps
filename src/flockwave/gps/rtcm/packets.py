@@ -1,7 +1,7 @@
 """RTCM V2 and V3 packet types that we support in this library."""
 
 from bitstring import pack
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
 from flockwave.gps.vectors import ECEFCoordinate
@@ -155,7 +155,7 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
     def __init__(
         self,
         station_id: Optional[int] = None,
-        corrections: Optional[List[CorrectionData]] = None,
+        corrections: Optional[list[CorrectionData]] = None,
     ):
         """Constructor.
 
