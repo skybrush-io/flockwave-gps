@@ -18,11 +18,11 @@ class LineReader:
     out of it.
     """
 
-    stream: "ReceiveStream"
+    stream: ReceiveStream
     _buffer: bytearray
     _line_generator: Generator[Optional[bytes], Optional[bytes], None]
 
-    def __init__(self, stream: "ReceiveStream", max_line_length: int = 16384):
+    def __init__(self, stream: ReceiveStream, max_line_length: int = 16384):
         self.stream = stream
 
         self._buffer = bytearray()
@@ -75,13 +75,13 @@ class Response:
     skips over the headers and de-chunks chunked responses automatically.
     """
 
-    _stream: "ReceiveStream"
+    _stream: ReceiveStream
     _headers: Optional[dict[str, bytes]]
     _protocol: Optional[bytes]
     _dechunker: Optional[Dechunker]
     _line_reader: LineReader
 
-    def __init__(self, stream: "ReceiveStream"):
+    def __init__(self, stream: ReceiveStream):
         """Constructor.
 
         Parameters:

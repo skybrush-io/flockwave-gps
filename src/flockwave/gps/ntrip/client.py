@@ -1,5 +1,7 @@
 """NTRIP client related classes."""
 
+from __future__ import annotations
+
 import click
 import sys
 
@@ -163,7 +165,7 @@ class NtripClient:
 
         return response
 
-    def _check_header(self, response: "Response", header: str, value: bytes):
+    def _check_header(self, response: Response, header: str, value: bytes):
         """Checks whether the given HTTP response contains the given header
         with the given value.
         """

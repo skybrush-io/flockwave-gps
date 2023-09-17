@@ -5,7 +5,7 @@ from enum import Enum
 __all__ = ("GNSSType",)
 
 
-_gnss_type_to_string: dict["GNSSType", str] = {}
+_gnss_type_to_string: dict[GNSSType, str] = {}
 
 
 class GNSSType(Enum):
