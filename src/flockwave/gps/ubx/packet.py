@@ -75,7 +75,7 @@ class _UBXPacketFactory:
             try:
                 class_id, subclass_id = _ubx_message_class_and_subclass_map[name]
             except KeyError:
-                raise AttributeError(name)
+                raise AttributeError(name) from None
 
             func = self._factories[name] = partial(
                 self._create_message, class_id, subclass_id

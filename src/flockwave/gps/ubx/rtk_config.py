@@ -196,6 +196,8 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
         await sleep(0.2)
 
         # CFG-TMODE3 parameter payload assembly
+        coords: tuple[int, int, int]
+        coords_hp: tuple[int, int, int]
         position = self.settings.position
         if position is not None:
             position_in_one_tenth_of_mm = position * 10000  # [m] --> [0.1 mm]
@@ -252,7 +254,7 @@ def test_rtk_base_configuration() -> None:
     try:
         from trio import open_nursery, run, sleep
     except ImportError:
-        raise ImportError("You need to install 'trio' to run this test")
+        raise ImportError("You need to install 'trio' to run this test") from None
 
     async def main() -> None:
         from flockwave.connections.serial import SerialPortStream

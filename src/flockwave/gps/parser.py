@@ -23,7 +23,7 @@ def _create_gps_subparser(format: str):
     try:
         factory = _parser_factories[format.lower()]
     except KeyError:
-        raise RuntimeError(f"Unknown GPS format: {format!r}")
+        raise RuntimeError(f"Unknown GPS format: {format!r}") from None
     return factory()
 
 

@@ -269,7 +269,7 @@ class RTCMV2Parser(RTCMParserBase[RTCMV2Packet]):
         :return: the reversed byte
         """
         result = 0
-        for i in range(6):
+        for _i in range(6):
             result = (result << 1) + (byte & 1)
             byte >>= 1
         return result

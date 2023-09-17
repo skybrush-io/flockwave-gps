@@ -31,10 +31,12 @@ class EphemerisData(_EphemerisData):
     # http://www.trimble.com/OEM_ReceiverHelp/V4.44/en/ICD_Pkt_Response55h_GPSEph.html
 
     @property
-    def a(self):  # noqa
+    def a(self):
         return self.sqrt_a**2
 
-    def calculate_satellite_position(self, transmit_time=0, time_of_flight=0):
+    def calculate_satellite_position(
+        self, transmit_time: float = 0, time_of_flight: float = 0
+    ) -> tuple[ECEFCoordinate, float]:
         """Calculates the position of the satellite in ECEF coordinates from
         the ephemeris data, the transmit time and the time of flight.
 
@@ -42,12 +44,12 @@ class EphemerisData(_EphemerisData):
         based upon http://home-2.worldonline.nl/~samsvl/stdalone.pas
 
         Parameters:
-            transmit_time (float): the transmit time (if known), in seconds
-            time_of_flight (float): the time of flight (if known), in seconds
+            transmit_time: the transmit time (if known), in seconds
+            time_of_flight: the time of flight (if known), in seconds
 
         Returns:
-            (ECEFCoordinate, float): the satellite position in ECEF coordinates
-                and the relativistic correction term
+            the satellite position in ECEF coordinates and the relativistic
+            correction term
         """
         mu = WGS84.GRAVITATIONAL_CONSTANT_TIMES_MASS
         omega_e_dot = WGS84.ROTATION_RATE_IN_RADIANS_PER_SEC
@@ -65,7 +67,8 @@ class EphemerisData(_EphemerisData):
         # Kepler equation
         M = self.m0 + n * T
         E = M
-        for i in range(20):
+        E_old = M
+        for _ in range(20):
             E_old = E
             E = M + ecc * sin(E)
             if abs(E - E_old) < 1e-12:
@@ -125,7 +128,7 @@ class EphemerisData(_EphemerisData):
         if time_of_flight != 0:
             omega_e_dot = 7.292115e-5
             alpha = time_of_flight * omega_e_dot
-            pos = pos.update(
+            pos.update(
                 x=pos.x * cos(alpha) + pos.y * sin(alpha),
                 y=pos.y * cos(alpha) - pos.x * sin(alpha),
             )
@@ -133,9 +136,9 @@ class EphemerisData(_EphemerisData):
         return pos, rel_term
 
     @property
-    def issue_of_data_clock(self):  # noqa
+    def issue_of_data_clock(self):
         return self.iodc
 
     @property
-    def issue_of_data_ephemeris(self):  # noqa
+    def issue_of_data_ephemeris(self):
         return self.iode

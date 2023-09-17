@@ -71,7 +71,7 @@ def test_rtk_survey_settings_update_from_json():
 
     assert settings.duration == 240
     assert settings.accuracy == 0.5
-    assert settings.gnss_types == set([GNSSType.GPS, GNSSType.GLONASS])
+    assert settings.gnss_types == {GNSSType.GPS, GNSSType.GLONASS}
     assert settings.message_set == RTKMessageSet.MSM7
     assert settings.position == ECEFCoordinate(4120354, 1418752, 4641855)
 
@@ -79,7 +79,7 @@ def test_rtk_survey_settings_update_from_json():
 
     assert settings.duration == 180
     assert settings.accuracy == 0.5
-    assert settings.gnss_types == set([GNSSType.GPS, GNSSType.GLONASS])
+    assert settings.gnss_types == {GNSSType.GPS, GNSSType.GLONASS}
     assert settings.message_set is RTKMessageSet.MSM4
     assert settings.position is None
 

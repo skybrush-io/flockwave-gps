@@ -227,7 +227,9 @@ def ntrip_streamer(url, username, password):
     try:
         from trio import run
     except ImportError:
-        raise ImportError("You need to install 'trio' to use the NTRIP streamer")
+        raise ImportError(
+            "You need to install 'trio' to use the NTRIP streamer"
+        ) from None
 
     client = NtripClient.create(url, username=username, password=password)
 

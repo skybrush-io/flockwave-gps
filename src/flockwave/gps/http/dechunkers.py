@@ -80,7 +80,7 @@ class ResponseDechunker(Dechunker):
                         "chunked transfer encoding protocol "
                         "violation; got char with code {0} when expecting a "
                         "hexadecimal number".format(byte)
-                    )
+                    ) from None
         elif self._state == ResponseDechunkerState.HEADER_ENDING:
             if byte != 10:
                 raise ValueError(

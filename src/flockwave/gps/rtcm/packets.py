@@ -129,7 +129,7 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
             )
 
         corrections = []
-        for i in range(num_corrections):
+        for _i in range(num_corrections):
             scale_factor = bitstream.read(1).uint
             bitstream.read(2)
             svid = bitstream.read(5).uint
@@ -603,21 +603,21 @@ class RTCMV3MSMSatelliteInfo:
         # about units and special values etc
 
         if is_high_resolution:
-            for obj in objects:
+            for _ in objects:
                 bitstream.read("int:20")  # pseudorange
-            for obj in objects:
+            for _ in objects:
                 bitstream.read("int:24")  # phase range
-            for obj in objects:
+            for _ in objects:
                 bitstream.read("uint:10")  # lock time
         else:
-            for obj in objects:
+            for _ in objects:
                 bitstream.read("int:15")  # pseudorange
-            for obj in objects:
+            for _ in objects:
                 bitstream.read("int:22")  # phase range
-            for obj in objects:
+            for _ in objects:
                 bitstream.read("uint:4")  # lock time
 
-        for obj in objects:
+        for _ in objects:
             bitstream.read("bool")  # half-cycle ambiguity
 
         if is_high_resolution:
@@ -626,7 +626,7 @@ class RTCMV3MSMSatelliteInfo:
                     bitstream.read("uint:10")
                     * RTCMParams.CARRIER_NOISE_RATIO_HIRES_UNITS
                 )
-            for obj in objects:
+            for _ in objects:
                 bitstream.read("int:15")  # phase range rate
         else:
             for obj in objects:
@@ -725,7 +725,7 @@ class RTCMV3GPSRTKPacket(RTCMV3Packet, SatelliteContainerMixin):
         result.smoothing_interval = bitstream.read(3).uint
         result.satellites = []
 
-        for i in range(satellite_count):
+        for _i in range(satellite_count):
             result.satellites.append(
                 RTCMV3GPSSatelliteInfo.create(bitstream, is_extended, has_l2)
             )
@@ -893,7 +893,7 @@ class RTCMV3GLONASSRTKPacket(RTCMV3Packet, SatelliteContainerMixin):
         result.smoothing_interval = bitstream.read(3).uint
         result.satellites = []
 
-        for i in range(satellite_count):
+        for _i in range(satellite_count):
             result.satellites.append(
                 RTCMV3GLONASSSatelliteInfo.create(bitstream, is_extended, has_l2)
             )

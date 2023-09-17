@@ -63,7 +63,7 @@ class Request:
         try:
             from trio import open_tcp_stream
         except ImportError:
-            raise ImportError("You need to install 'trio' to use this method")
+            raise ImportError("You need to install 'trio' to use this method") from None
 
         if self.data is not None:
             raise NotImplementedError("POST requests not supported yet")

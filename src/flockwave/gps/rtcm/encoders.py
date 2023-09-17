@@ -72,7 +72,7 @@ class RTCMV2Encoder:
                 raise NotImplementedError(
                     "Unsupported RTCM v2 packet type: "
                     "{0!r}".format(message.packet_type)
-                )
+                ) from None
 
         self._prepend_message_header(bits, message, time_of_week)
         if add_parities:
@@ -231,7 +231,7 @@ class RTCMV3Encoder:
             else:
                 raise NotImplementedError(
                     f"Unsupported RTCM v3 packet type: {message.packet_type!r}"
-                )
+                ) from None
 
         data = bits.tobytes()
 
@@ -263,8 +263,8 @@ def create_rtcm_encoder(format: Union[int, str]) -> Callable[[RTCMPacket], bytes
         the parser function
     """
     if format == "rtcm2" or format == 2:
-        return RTCMV2Encoder().encode
+        return RTCMV2Encoder().encode  # type: ignore
     elif format == "rtcm3" or format == 3:
-        return RTCMV3Encoder().encode
+        return RTCMV3Encoder().encode  # type: ignore
     else:
         raise ValueError(f"unknown RTCM format: {format!r}")
