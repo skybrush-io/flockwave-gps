@@ -208,7 +208,17 @@ class NtripClient:
     default=None,
     help="the password to use when connecting",
 )
-def ntrip_streamer(url, username, password):
+@click.option(
+    "-j",
+    "--json/--no-json",
+    default=False,
+    help=(
+        "print the timestamped chunks received from the NTRIP server in JSON "
+        "format. Payload will be base64-encoded. Useful for replaying the "
+        "stream later."
+    ),
+)
+def ntrip_streamer(url, username, password, json):
     """Copies a stream from an NTRIP server directly into the standard
     output.
 
@@ -224,6 +234,9 @@ def ntrip_streamer(url, username, password):
     www.euref-ip.net/BUTE0, ntrip://ntrip.use-snip.com/RTCM3EPH,
     ntrip1://152.66.6.49/RTCM23
     """
+    from json import dumps
+    from time import monotonic
+
     try:
         from trio import run
     except ImportError:
@@ -235,11 +248,24 @@ def ntrip_streamer(url, username, password):
 
     async def main():
         stream = await client.get_stream()
+        prev = monotonic()
         while True:
             data = await stream.read()
-            if not data:
-                print("Stream ended.", file=sys.stderr)
-                break
+            if json:
+                now = monotonic()
+                dt = int((now - prev) * 1000)
+                data = (
+                    dumps({"dt": dt, "data": b64encode(data).decode("ascii")}).encode(
+                        "ascii"
+                    )
+                    + b"\n"
+                )
+                prev = now
+            else:
+                if not data:
+                    print("Stream ended.", file=sys.stderr)
+                    break
+
             sys.stdout.buffer.write(data)
             sys.stdout.flush()
 
