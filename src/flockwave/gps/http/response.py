@@ -8,7 +8,7 @@ from .dechunkers import Dechunker, NullDechunker, ResponseDechunker
 from .errors import AccessDeniedError, AuthenticationNeededError, ResponseError
 
 if TYPE_CHECKING:
-    from trio.abc import ReceiveStream
+    from trio.abc import ReceiveStream, Stream
 
 __all__ = ("Response",)
 
@@ -71,17 +71,17 @@ class LineReader:
 
 
 class Response:
-    """Simple HTTP response object that reads from a Trio ReceiveStream,
+    """Simple HTTP response object that reads from a Trio Stream,
     skips over the headers and de-chunks chunked responses automatically.
     """
 
-    _stream: ReceiveStream
+    _stream: Stream
+    _pushback_stream: ReceiveStream
     _headers: Optional[dict[str, bytes]]
     _protocol: Optional[bytes]
     _dechunker: Optional[Dechunker]
-    _line_reader: LineReader
 
-    def __init__(self, stream: ReceiveStream):
+    def __init__(self, stream: Stream):
         """Constructor.
 
         Parameters:
@@ -92,7 +92,6 @@ class Response:
         self._headers = None
         self._protocol = None
         self._dechunker = None
-        self._line_reader = LineReader(self._stream)
 
     async def _read_headers(self) -> None:
         """Reads all the headers from the response and ensures that the
@@ -102,7 +101,8 @@ class Response:
 
         self._headers = {}
 
-        readline = self._line_reader.readline
+        line_reader = LineReader(self._stream)
+        readline = line_reader.readline
 
         line = await readline()
         if not line:
@@ -138,8 +138,8 @@ class Response:
 
         from ._lazy_deps import PushbackStreamWrapper
 
-        self._stream = PushbackStreamWrapper(self._stream)
-        self._stream.push_back(self._line_reader.get_remainder())
+        self._pushback_stream = PushbackStreamWrapper(self._stream)
+        self._pushback_stream.push_back(line_reader.get_remainder())
 
     def _process_headers(self):
         if self.getheader("Transfer-Encoding") == b"chunked":
@@ -213,7 +213,7 @@ class Response:
             else:
                 to_read = min(bytes_left, block_size)
 
-            chunk = await self._stream.receive_some(to_read)
+            chunk = await self._pushback_stream.receive_some(to_read)
             if not chunk:
                 break
 
@@ -229,4 +229,12 @@ class Response:
 
         return b"".join(result)
 
+    async def send_all(self, data: bytes) -> None:
+        """Sends the given bytes to the server while the response is still
+        beng read. Useful for protocols implemented on top of HTTP that allows
+        sending extra data after the client has started reading the response.
+        """
+        await self._stream.send_all(data)
+
     read = receive_some
+    write = send_all

@@ -13,10 +13,16 @@ class Request:
     """HTTP request object."""
 
     data: Optional[bytes]
+    """The data to send in the body of the HTTP request."""
+
     headers: OrderedDict[str, bytes]
+    """The headers to send with the HTTP request."""
 
     def __init__(
-        self, url: bytes, data: Optional[bytes] = None, headers: dict[str, bytes] = None
+        self,
+        url: bytes,
+        data: Optional[bytes] = None,
+        headers: Optional[dict[str, bytes]] = None,
     ):
         """Constructs a new HTTP request object.
 
@@ -25,7 +31,7 @@ class Request:
             data: the data to POST to the URL or ``None`` if no data should be
                 posted. Currently unused, we have it here for compatibility with
                 Python's own Request class from ``urllib2``.
-            headers (dict): additional headers of the request.
+            headers: additional headers of the request.
         """
         self.url = url
         self.data = data

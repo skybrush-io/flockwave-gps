@@ -128,7 +128,9 @@ class NtripClient:
         """
         self.connection_info = connection_info
 
-    async def get_stream(self, mountpoint: Optional[str] = None, timeout: float = 10):
+    async def get_stream(
+        self, mountpoint: Optional[str] = None, timeout: float = 10
+    ) -> Response:
         """Returns a file-like object that will stream the DGPS data from
         the NTRIP caster.
 
