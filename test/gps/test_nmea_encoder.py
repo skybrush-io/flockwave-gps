@@ -27,4 +27,4 @@ $GPGSV,3,1,11,10,63,137,17,07,61,098,15,05,59,290,20,08,54,157,30*70"""
 
     encoder = create_gps_encoder("nmea")
     for message, sentence in zip(messages, expected.split(b"\n")):
-        assert encoder(message) == sentence
+        assert encoder(message) == sentence + b"\r\n"
