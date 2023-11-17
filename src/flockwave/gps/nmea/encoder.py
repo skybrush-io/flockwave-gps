@@ -9,7 +9,7 @@ class NMEAEncoder:
     """NMEA-0183 sentence encoder."""
 
     def encode(self, packet: NMEAPacket) -> bytes:
-        return str(packet).encode("ascii")
+        return str(packet).encode("ascii") + b"\r\n"
 
 
 def create_nmea_encoder() -> Callable[[NMEAPacket], bytes]:
