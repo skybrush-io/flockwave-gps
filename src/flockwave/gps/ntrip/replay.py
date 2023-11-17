@@ -51,7 +51,7 @@ def ntrip_replayer(file, port: int = 5555, stdout: bool = False):
 
     async def handle_request(stream):
         log("Connection open")
-        async for chunk in iter_contents_of(file):
+        async for _chunk in iter_contents_of(file):
             try:
                 await stream.send_all()
             except BrokenResourceError:
