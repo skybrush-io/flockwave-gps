@@ -1,5 +1,4 @@
-"""Writer objects that write RTCM V2 or V3 messages.
-"""
+"""Writer objects that write RTCM V2 or V3 messages."""
 
 from bitstring import BitArray, pack
 from itertools import cycle
@@ -70,8 +69,7 @@ class RTCMV2Encoder:
                 bits = BitArray(bytes=message.bytes)
             else:
                 raise NotImplementedError(
-                    "Unsupported RTCM v2 packet type: "
-                    "{0!r}".format(message.packet_type)
+                    "Unsupported RTCM v2 packet type: {0!r}".format(message.packet_type)
                 ) from None
 
         self._prepend_message_header(bits, message, time_of_week)

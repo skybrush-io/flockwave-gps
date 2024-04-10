@@ -484,7 +484,7 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
 
 
 def create_rtcm_parser(
-    format: Union[int, str] = "auto"
+    format: Union[int, str] = "auto",
 ) -> Callable[[bytes], Iterable[RTCMPacket]]:
     """Creates an RTCM parser function that is suitable to be used in
     conjunction with the channels from the ``flockwave-conn`` module.

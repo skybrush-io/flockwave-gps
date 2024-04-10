@@ -50,7 +50,7 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
 
         # Configure measurement rate to 1 Hz (0x3e8 msec), one solution for one
         # measurement, align measurements to GPS time
-        await send(UBX.CFG_RATE(b"\xE8\x03\x01\x00\x01\x00"))
+        await send(UBX.CFG_RATE(b"\xe8\x03\x01\x00\x01\x00"))
 
         # Configure navigation engine to stationary
         await send(
