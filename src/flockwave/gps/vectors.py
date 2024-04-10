@@ -453,7 +453,7 @@ class GPSCoordinate(AltitudeMixin):
         )
 
     @property
-    def json(self):
+    def json(self) -> list[int]:
         """Returns the JSON representation of the coordinate."""
         retval = [
             int(round(self._lat * 1e7)),
@@ -600,7 +600,7 @@ class FlatEarthCoordinate(AltitudeMixin):
         )
 
     @property
-    def json(self):
+    def json(self) -> list[int]:
         """Returns the JSON representation of the coordinate."""
         retval = [
             int(round(self._x * 1e3)),
@@ -862,7 +862,7 @@ class FlatEarthToGPSCoordinateTransformation:
         self.origin = origin if origin is not None else GPSCoordinate()
 
     @property
-    def json(self):
+    def json(self) -> dict[str, Any]:
         """Returns the JSON representation of the coordinate transformation."""
         return {
             "origin": [self._origin_lon, self._origin_lat],

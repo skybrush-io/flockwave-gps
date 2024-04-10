@@ -1,7 +1,7 @@
 """RTCM V2 and V3 packet types that we support in this library."""
 
 from bitstring import pack
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
 from flockwave.gps.vectors import ECEFCoordinate
@@ -417,7 +417,7 @@ class RTCMV3GPSSatelliteInfo:
             return self.l1["cnr"]
 
     @property
-    def json(self):
+    def json(self) -> dict[str, Any]:
         """Returns a compact JSON representation of the object."""
         keys = ["svid", "l1", "l2"]
         return {key: getattr(self, key, None) for key in keys}
@@ -519,7 +519,7 @@ class RTCMV3GLONASSSatelliteInfo:
             return self.l1["cnr"]
 
     @property
-    def json(self):
+    def json(self) -> dict[str, Any]:
         """Returns a compact JSON representation of the object."""
         keys = ["svid", "l1", "l2"]
         return {key: getattr(self, key, None) for key in keys}
@@ -641,7 +641,7 @@ class RTCMV3MSMSatelliteInfo:
         return signal_data
 
     @property
-    def json(self):
+    def json(self) -> dict[str, Any]:
         """Returns a compact JSON representation of the object."""
         keys = ["svid", "range", "extended_info", "rng_m", "rate", "cnr", "signals"]
         return {key: getattr(self, key, None) for key in keys}
@@ -733,7 +733,7 @@ class RTCMV3GPSRTKPacket(RTCMV3Packet, SatelliteContainerMixin):
         return result
 
     @property
-    def json(self):
+    def json(self) -> dict[str, Any]:
         """Returns a compact JSON representation of the packet."""
         keys = [
             "packet_type",
@@ -901,7 +901,7 @@ class RTCMV3GLONASSRTKPacket(RTCMV3Packet, SatelliteContainerMixin):
         return result
 
     @property
-    def json(self):
+    def json(self) -> dict[str, Any]:
         """Returns a compact JSON representation of the packet."""
         keys = [
             "packet_type",
@@ -1216,7 +1216,7 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin):
         return result
 
     @property
-    def json(self):
+    def json(self) -> dict[str, Any]:
         """Returns a compact JSON representation of the packet."""
         keys = [
             "packet_type",
