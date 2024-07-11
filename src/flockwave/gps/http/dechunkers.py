@@ -90,7 +90,10 @@ class ResponseDechunker(Dechunker):
                     "chunked transfer encoding protocol "
                     "violation; got char with code {0} when expecting 10".format(byte)
                 )
-            self._state = ResponseDechunkerState.BODY
+            if self._chunk_length > 0:
+                self._state = ResponseDechunkerState.BODY
+            else:
+                self._state = ResponseDechunkerState.START
         elif self._state == ResponseDechunkerState.BODY:
             if self._chunk_length > 0:
                 self._chunk_length -= 1
