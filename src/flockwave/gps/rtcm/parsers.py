@@ -349,8 +349,8 @@ class RTCMV3Parser(RTCMParserBase[RTCMV3Packet]):
             # Reading parity byte
             self._parity.append(byte)
             if len(self._parity) >= 3:
+                self._state = RTCMV3ParserState.START
                 if self._check_parity(self._packet, self._parity):
-                    self._state = RTCMV3ParserState.START
                     return self._process_packet(self._packet)
                 else:
                     raise ChecksumError(self._packet, self._parity)
