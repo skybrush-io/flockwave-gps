@@ -78,12 +78,16 @@ class Request:
         parts = urlparse(self.url)
 
         if not self.has_header("Host"):
+            assert parts.hostname is not None
+
+            hostname = parts.hostname.decode("utf-8")
+            port = parts.port
+
             if parts.port and parts.port != 80:
-                self.add_header(
-                    "Host", "{0.hostname}:{0.port}".format(parts).encode("ascii")
-                )
+                self.add_header("Host", f"{hostname}:{port}".encode("ascii"))
             else:
-                self.add_header("Host", "{0.hostname}".format(parts).encode("ascii"))
+                self.add_header("Host", hostname.encode("ascii"))
+
         if not self.has_header("Connection"):
             self.add_header("Connection", b"close")
 
