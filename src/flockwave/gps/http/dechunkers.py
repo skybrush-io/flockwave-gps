@@ -8,9 +8,12 @@ from typing import Optional
 
 __all__ = ("NullDechunker", "ResponseDechunker")
 
-ResponseDechunkerState = Enum(
-    "ResponseDechunkerState", "START HEADER_ENDING BODY BODY_ENDING"
-)
+
+class ResponseDechunkerState(Enum):
+    START = "START"
+    HEADER_ENDING = "HEADER_ENDING"
+    BODY = "BODY"
+    BODY_ENDING = "BODY_ENDING"
 
 
 class Dechunker(metaclass=ABCMeta):

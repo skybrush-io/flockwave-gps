@@ -2,7 +2,7 @@
 receiver.
 """
 
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional, Protocol, TypeVar
 
 from .nmea.parser import NMEAParser
 from .rtcm.parsers import RTCMV2Parser, RTCMV3Parser
@@ -11,7 +11,15 @@ from .ubx.parser import UBXParser
 __all__ = ("create_gps_parser",)
 
 
-_parser_factories: dict[str, Callable[[], Any]] = {
+T = TypeVar("T", covariant=True)
+
+
+class Parser(Protocol[T]):
+    def feed(self, data: bytes) -> Iterable[T]: ...
+    def reset(self) -> None: ...
+
+
+_parser_factories: dict[str, Callable[[], Parser]] = {
     "nmea": NMEAParser,
     "rtcm2": RTCMV2Parser,
     "rtcm3": RTCMV3Parser,
@@ -19,7 +27,7 @@ _parser_factories: dict[str, Callable[[], Any]] = {
 }
 
 
-def _create_gps_subparser(format: str):
+def _create_gps_subparser(format: str) -> Parser[Any]:
     try:
         factory = _parser_factories[format.lower()]
     except KeyError:

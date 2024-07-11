@@ -28,10 +28,20 @@ __all__ = (
 )
 
 
-RTCMV2ParserState = Enum("RTCMV2ParserState", "START LENGTH PAYLOAD")
-RTCMV3ParserState = Enum("RTCMV3ParserState", "START LENGTH PAYLOAD PARITY")
+class RTCMV2ParserState(Enum):
+    START = "START"
+    LENGTH = "LENGTH"
+    PAYLOAD = "PAYLOAD"
 
-T = TypeVar("T", RTCMV2Packet, RTCMV3Packet)
+
+class RTCMV3ParserState(Enum):
+    START = "START"
+    LENGTH = "LENGTH"
+    PAYLOAD = "PAYLOAD"
+    PARITY = "PARITY"
+
+
+T = TypeVar("T")
 
 
 class RTCMParser(Generic[T], metaclass=ABCMeta):
