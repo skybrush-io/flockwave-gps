@@ -220,6 +220,12 @@ class Response:
             if self._dechunker is not None:
                 chunk = self._dechunker.feed(chunk)
 
+                # At this point it may happen that we are handed an empty
+                # chunk from the dechunker. It does not mean EOF so we need to
+                # continue with the next iteration.
+                if not chunk:
+                    continue
+
             result.append(chunk)
             if bytes_left is not None:
                 bytes_left -= len(chunk)
