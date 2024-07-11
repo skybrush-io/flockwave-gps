@@ -1,7 +1,7 @@
 """Helper functions for RTCM message decoding"""
 
 from operator import attrgetter
-from typing import Any, Iterable, Optional
+from typing import Iterable, Optional, TypeVar
 
 __all__ = ("count_bits", "get_best_satellites")
 
@@ -9,6 +9,9 @@ __all__ = ("count_bits", "get_best_satellites")
 _count_bits_table = [0] * 256
 for i in range(256):
     _count_bits_table[i] = (i & 1) + _count_bits_table[i >> 1]
+
+
+T = TypeVar("T")
 
 
 def count_bits(value: int) -> int:
@@ -30,8 +33,8 @@ def count_bits(value: int) -> int:
 
 
 def get_best_satellites(
-    satellites: Iterable[Any], count: Optional[int] = None
-) -> list[Any]:
+    satellites: Iterable[T], count: Optional[int] = None
+) -> list[T]:
     """Given a list of satellite objects, each of which having a `cnr`
     attribute containing the carrier-to-noise ratio, returns the ones that
     have the best carrier-to-noise ratio, in decreasing order.
