@@ -621,16 +621,26 @@ class RTCMV3MSMSatelliteInfo:
     id: str
     signals: list[RTCMV3MSMSignal]
     cnr: Optional[float]
+    range: float
+    extended_info: Optional[int]
+    rng_m: int
+    rate: Optional[int]
 
     def __init__(self, svid: int, prefix: str):
         self.svid = svid
         self.id = "{1}{0:02}".format(svid, prefix)
         self.signals = []
         self.cnr = None
+        self.range = 0
+        self.extended_info = None
+        self.rng_m = 0
+        self.rate = None
 
     @staticmethod
     def update_satellite_data(
-        objects, bitstream: BitStream, is_high_resolution: bool = False
+        objects: list[RTCMV3MSMSatelliteInfo],
+        bitstream: BitStream,
+        is_high_resolution: bool = False,
     ):
         """Updates multiple satellite info object with the satellite-related
         data from a bit stream that is supposed to be part of the body of an
@@ -657,11 +667,15 @@ class RTCMV3MSMSatelliteInfo:
                 obj.rate = None
 
     @staticmethod
-    def update_signal_data(objects, bitstream, is_high_resolution=False):
+    def update_signal_data(
+        objects: list[RTCMV3MSMSignal],
+        bitstream: BitStream,
+        last_digit_of_packet_type: int,
+    ):
         # TODO(ntamas): store these; see the RTKLIB source code for details
         # about units and special values etc
 
-        if is_high_resolution:
+        if last_digit_of_packet_type in (6, 7):
             for _ in objects:
                 bitstream.read("int:20")  # pseudorange
             for _ in objects:
@@ -679,17 +693,19 @@ class RTCMV3MSMSatelliteInfo:
         for _ in objects:
             bitstream.read("bool")  # half-cycle ambiguity
 
-        if is_high_resolution:
+        if last_digit_of_packet_type in (6, 7):
             for obj in objects:
                 obj["cnr"] = (
                     bitstream.read("uint:10")
                     * RTCMParams.CARRIER_NOISE_RATIO_HIRES_UNITS
                 )
-            for _ in objects:
-                bitstream.read("int:15")  # phase range rate
         else:
             for obj in objects:
                 obj["cnr"] = bitstream.read("uint:6")
+
+        if last_digit_of_packet_type in (5, 7):  # not a typo
+            for _ in objects:
+                bitstream.read("int:15")  # phase range rate
 
     def add_empty_signal_data(self, signal_id: int):
         """Adds a placeholder for the data related to the signal with the given
@@ -1221,7 +1237,18 @@ class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
 # TODO: 1020 -- GLONASS ephemeris
 
 
-@RTCMV3Packet.register(1074, 1077, 1084, 1087, 1094, 1097, 1114, 1117, 1124, 1127)
+# fmt: off
+SUPPORTED_RTCMV3_MSM_PACKET_TYPES: tuple[int, ...] = (
+    1074, 1075, 1076, 1077,
+    1084, 1085, 1086, 1087,
+    1094, 1095, 1096, 1097,
+    1114, 1115, 1116, 1117,
+    1124, 1125, 1126, 1127,
+)
+# fmt: on
+
+
+@RTCMV3Packet.register(*SUPPORTED_RTCMV3_MSM_PACKET_TYPES)
 class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteInfo]):
     """RTCM v3 MSM (multiple signal message) packet representation.
 
@@ -1229,8 +1256,8 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteIn
     1081 to 1087 (GLONASS), 1091 to 1097 (Galileo), 1111 to 1117 (QZSS) and
     1121 to 1127 (BeiDou).
 
-    Currently we have implemented support for packet types ending in 4 and 7
-    only; these two are the most common.
+    Currently we have implemented support for packet types ending in 4, 5, 6
+    and 7 only; these two are the most common.
     """
 
     station_id: int
@@ -1254,20 +1281,10 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteIn
         Returns:
             the packet data parsed out of the bitstream
         """
-        assert packet_type in (
-            1074,
-            1077,
-            1084,
-            1087,
-            1094,
-            1097,
-            1114,
-            1117,
-            1124,
-            1127,
-        )
+        assert packet_type in SUPPORTED_RTCMV3_MSM_PACKET_TYPES
 
-        is_high_resolution = packet_type % 10 == 7
+        last_digit: int = packet_type % 10
+        has_hires_sat_data = last_digit == 5 or last_digit == 7
 
         result = cls(packet_type)
 
@@ -1316,7 +1333,7 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteIn
         RTCMV3MSMSatelliteInfo.update_satellite_data(
             result.satellites,
             bitstream,
-            is_high_resolution=is_high_resolution,
+            is_high_resolution=has_hires_sat_data,
         )
 
         # Create empty placeholders in the satellite info objects for each cell
@@ -1336,7 +1353,7 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteIn
         RTCMV3MSMSatelliteInfo.update_signal_data(
             cells_to_signals,
             bitstream,
-            is_high_resolution=is_high_resolution,
+            last_digit_of_packet_type=last_digit,
         )
 
         for satellite in result.satellites:
