@@ -5,7 +5,12 @@ from __future__ import annotations
 from typing import Generator, Optional, TYPE_CHECKING
 
 from .dechunkers import Dechunker, NullDechunker, ResponseDechunker
-from .errors import AccessDeniedError, AuthenticationNeededError, ResponseError
+from .errors import (
+    AccessDeniedError,
+    AuthenticationNeededError,
+    NotFoundError,
+    ResponseError,
+)
 
 if TYPE_CHECKING:
     from trio.abc import ReceiveStream, Stream
@@ -118,6 +123,8 @@ class Response:
             raise AuthenticationNeededError("Authentication needed")
         elif code == b"403":
             raise AccessDeniedError("Access denied")
+        elif code == b"404":
+            raise NotFoundError("Not found")
         elif code != b"200":
             raise ResponseError("Received HTTP response: {0!r}".format(code))
 

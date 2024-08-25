@@ -27,3 +27,11 @@ class AuthenticationNeededError(ResponseError):
     """
 
     pass
+
+
+class NotFoundError(ResponseError):
+    """Error thrown by HTTP response objects that indicate that a remote
+    resource is not found.
+    """
+
+    pass
