@@ -7,6 +7,7 @@ from typing import Any, Optional, TypeVar
 
 from .constants import WGS84
 
+
 __all__ = (
     "GPSCoordinate",
     "FlatEarthCoordinate",
@@ -451,6 +452,15 @@ class GPSCoordinate(AltitudeMixin):
         return self.__class__(
             lat=self.lat, lon=self.lon, amsl=self.amsl, ahl=self.ahl, agl=self.agl
         )
+
+    def format(self) -> str:
+        """Formats the GPS coordinate as a string."""
+        if self.amsl is not None:
+            return f"{self.lat:.7f}°, {self.lon:.7f}°, {self.amsl:.1f}m AMSL"
+        elif self.agl is not None:
+            return f"{self.lat:.7f}°, {self.lon:.7f}°, {self.amsl:.1f}m AGL"
+        else:
+            return f"{self.lat:.7f}°, {self.lon:.7f}°"
 
     @property
     def json(self) -> list[int]:

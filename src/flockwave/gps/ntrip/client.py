@@ -10,7 +10,9 @@ from dataclasses import dataclass, replace
 from typing import Optional, TYPE_CHECKING
 from urllib.parse import urlparse
 
+from flockwave.gps.formatting import format_gps_coordinate_as_nmea_gga_message
 from flockwave.gps.http import Request
+from flockwave.gps.vectors import GPSCoordinate
 
 if TYPE_CHECKING:
     from flockwave.gps.http import Response
@@ -211,16 +213,34 @@ class NtripClient:
     help="the password to use when connecting",
 )
 @click.option(
-    "-j",
-    "--json/--no-json",
-    default=False,
+    "--format",
+    default="raw",
+    type=click.Choice(["raw", "hex", "json"]),
     help=(
-        "print the timestamped chunks received from the NTRIP server in JSON "
-        "format. Payload will be base64-encoded. Useful for replaying the "
-        "stream later."
+        "the output format. 'raw' prints the raw bytes from the NTRIP server. "
+        "'hex' prints a hex dump of the raw bytes from the NTRIP server. "
+        "'json' prints the timestamped chunks received from the NTRIP server "
+        "in JSON format (chunks will be base64-encoded). This is useful for "
+        "replaying the stream later."
     ),
 )
-def ntrip_streamer(url, username, password, json):
+@click.option(
+    "--coord",
+    default="",
+    type=str,
+    help=(
+        "coordinates to send in an NMEA GGA message to start the stream. "
+        "Comma-separated latitude, longitude and altitude, in decimal "
+        "format. Altitude is optional."
+    ),
+)
+def ntrip_streamer(
+    url: str,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+    format: str = "raw",
+    coord: str = "",
+):
     """Copies a stream from an NTRIP server directly into the standard
     output.
 
@@ -248,12 +268,32 @@ def ntrip_streamer(url, username, password, json):
 
     client = NtripClient.create(url, username=username, password=password)
 
+    _hexdump_table = bytes([i if i >= 32 and i < 127 else 46 for i in range(256)])
+
     async def main():
         stream = await client.get_stream()
+        print(f"Connected to {url}.", file=sys.stderr)
+
+        if coord:
+            parts = coord.split(",")
+            if len(parts) < 2 or len(parts) > 3:
+                raise RuntimeError(f"Invalid coordinate: {coord!r}")
+
+            lat, lon = parts[:2]
+            alt = float(parts[2]) if len(parts) > 2 else 0
+            coord_obj = GPSCoordinate(float(lat), float(lon), amsl=alt)
+            await stream.write(
+                format_gps_coordinate_as_nmea_gga_message(coord_obj).encode("ascii")
+            )
+
         prev = monotonic()
         while True:
             data = await stream.read()
-            if json:
+            if not data:
+                print("Stream ended.", file=sys.stderr)
+                break
+
+            if format == "json":
                 now = monotonic()
                 dt = int((now - prev) * 1000)
                 data = (
@@ -263,13 +303,28 @@ def ntrip_streamer(url, username, password, json):
                     + b"\n"
                 )
                 prev = now
-            else:
-                if not data:
-                    print("Stream ended.", file=sys.stderr)
-                    break
 
-            sys.stdout.buffer.write(data)
-            sys.stdout.flush()
+            elif format == "hex":
+                for start in range(0, len(data), 16):
+                    parts = [
+                        f"{start:08x}  ",
+                        data[start : start + 8].hex(" "),
+                        "  ",
+                        data[start + 8 : start + 16].hex(" "),
+                    ]
+
+                    sys.stdout.write("".join(parts).ljust(60))
+                    sys.stdout.write("|")
+                    sys.stdout.write(
+                        data[start : start + 16]
+                        .translate(_hexdump_table)
+                        .decode("ascii")
+                    )
+                    sys.stdout.write("|\n")
+
+            else:
+                sys.stdout.buffer.write(data)
+                sys.stdout.flush()
 
     run(main)
 
