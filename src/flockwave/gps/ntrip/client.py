@@ -7,7 +7,7 @@ import sys
 
 from base64 import b64encode
 from dataclasses import dataclass, replace
-from typing import Optional, TYPE_CHECKING
+from typing import Awaitable, Callable, Optional, TYPE_CHECKING
 from urllib.parse import urlparse
 
 from flockwave.gps.formatting import format_gps_coordinate_as_nmea_gga_message
@@ -260,35 +260,22 @@ def ntrip_streamer(
     from time import monotonic
 
     try:
-        from trio import run
+        from trio import open_nursery, run, sleep, TASK_STATUS_IGNORED
     except ImportError:
         raise ImportError(
             "You need to install 'trio' to use the NTRIP streamer"
         ) from None
 
-    client = NtripClient.create(url, username=username, password=password)
-
-    _hexdump_table = bytes([i if i >= 32 and i < 127 else 46 for i in range(256)])
-
-    async def main():
-        stream = await client.get_stream()
-        print(f"Connected to {url}.", file=sys.stderr)
-
-        if coord:
-            parts = coord.split(",")
-            if len(parts) < 2 or len(parts) > 3:
-                raise RuntimeError(f"Invalid coordinate: {coord!r}")
-
-            lat, lon = parts[:2]
-            alt = float(parts[2]) if len(parts) > 2 else 0
-            coord_obj = GPSCoordinate(float(lat), float(lon), amsl=alt)
-            await stream.write(
-                format_gps_coordinate_as_nmea_gga_message(coord_obj).encode("ascii")
-            )
-
+    async def read_messages(
+        reader: Callable[[], Awaitable[bytes]], *, task_status=TASK_STATUS_IGNORED
+    ) -> None:
+        hexdump_table = bytes([i if i >= 32 and i < 127 else 46 for i in range(256)])
         prev = monotonic()
+
+        task_status.started()
+
         while True:
-            data = await stream.read()
+            data = await reader()
             if not data:
                 print("Stream ended.", file=sys.stderr)
                 break
@@ -317,7 +304,7 @@ def ntrip_streamer(
                     sys.stdout.write("|")
                     sys.stdout.write(
                         data[start : start + 16]
-                        .translate(_hexdump_table)
+                        .translate(hexdump_table)
                         .decode("ascii")
                     )
                     sys.stdout.write("|\n")
@@ -325,6 +312,37 @@ def ntrip_streamer(
             else:
                 sys.stdout.buffer.write(data)
                 sys.stdout.flush()
+
+    async def send_position(
+        coord: GPSCoordinate, sender: Callable[[bytes], Awaitable[None]]
+    ):
+        while True:
+            await sender(
+                format_gps_coordinate_as_nmea_gga_message(coord).encode("ascii")
+            )
+            await sleep(60)
+
+    async def main():
+        client = NtripClient.create(url, username=username, password=password)
+
+        stream = await client.get_stream()
+        print(f"Connected to {url}.", file=sys.stderr)
+
+        if coord:
+            parts = coord.split(",")
+            if len(parts) < 2 or len(parts) > 3:
+                raise RuntimeError(f"Invalid coordinate: {coord!r}")
+
+            lat, lon = parts[:2]
+            alt = float(parts[2]) if len(parts) > 2 else 0
+            coord_obj = GPSCoordinate(float(lat), float(lon), amsl=alt)
+        else:
+            coord_obj = None
+
+        async with open_nursery() as nursery:
+            await nursery.start(read_messages, stream.read)
+            if coord_obj:
+                nursery.start_soon(send_position, coord_obj, stream.write)
 
     run(main)
 
