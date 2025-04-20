@@ -15,11 +15,6 @@ cli = [
     "click>=8.1.0",
     "trio>=0.24.0"
 ]
-dev = [
-    "pytest>=8",
-    "coverage[toml]>=7.2.1",
-    "pytest-cov>=6.1.1"
-]
 ntrip = [
     "trio>=0.24.0"
 ]
@@ -28,6 +23,11 @@ ntrip = [
 packages = [
     { include = "flockwave", from = "src" }
 ]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pytest-cov = "^6.1.1"
+coverage = {extras = ["toml"], version = "^7.8.0"}
 
 [[tool.poetry.source]]
 name = "PyPI"
