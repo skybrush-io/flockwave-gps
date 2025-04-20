@@ -1,6 +1,6 @@
 [project]
 name = "flockwave-gps"
-version = "3.4.0"
+version = "4.0.0"
 description = "GPS and geography related routines and classes"
 authors = [{ name = "Tamas Nepusz", email = "tamas@collmot.com" }]
 license = "MIT"
