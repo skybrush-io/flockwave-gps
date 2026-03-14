@@ -30,7 +30,7 @@ class PushbackStreamWrapper(ReceiveStream):
     def push_back(self, data: bytes) -> None:
         self._remainder = bytearray(data) + self._remainder
 
-    async def receive_some(self, max_bytes: int | None = None) -> bytes:
+    async def receive_some(self, max_bytes: int | None = None) -> bytes | bytearray:
         if self._remainder:
             available = len(self._remainder)
             to_return = (
@@ -40,4 +40,4 @@ class PushbackStreamWrapper(ReceiveStream):
             del self._remainder[:to_return]
             return result
 
-        return await self._stream.receive_some(max_bytes)  # type: ignore
+        return await self._stream.receive_some(max_bytes)

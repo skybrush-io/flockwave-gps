@@ -1,7 +1,7 @@
 """Simple HTTP request object for the low-level HTTP library."""
 
+from collections import OrderedDict
 from io import BytesIO
-from typing import OrderedDict
 from urllib.parse import quote, urlparse
 
 from .response import Response
@@ -76,6 +76,8 @@ class Request:
 
         method = "GET"
         parts = urlparse(self.url)
+        if parts.hostname is None or parts.port is None:
+            raise ValueError(f"Unsupported URL: {self.url!r}")
 
         if not self.has_header("Host"):
             assert parts.hostname is not None

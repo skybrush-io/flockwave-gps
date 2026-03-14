@@ -71,7 +71,7 @@ class LineReader:
             more_data = await self.stream.receive_some(1024)
             if not more_data:
                 return b""  # this is the EOF indication expected by my caller
-            line = self._line_generator.send(more_data)
+            line = self._line_generator.send(bytes(more_data))
         return line
 
 
@@ -221,6 +221,8 @@ class Response:
             chunk = await self._pushback_stream.receive_some(to_read)
             if not chunk:
                 break
+
+            chunk = bytes(chunk)
 
             if self._dechunker is not None:
                 chunk = self._dechunker.feed(chunk)
