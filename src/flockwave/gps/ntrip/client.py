@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import click
 import sys
-
 from base64 import b64encode
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Awaitable, Callable
 from urllib.parse import urlparse
+
+import click
 
 from flockwave.gps.formatting import format_gps_coordinate_as_nmea_gga_message
 from flockwave.gps.http import Request
@@ -30,10 +30,10 @@ class NtripClientConnectionInfo:
 
     host: str
     port: int = 2101
-    username: Optional[str] = None
-    password: Optional[str] = None
-    mountpoint: Optional[str] = None
-    version: Optional[int] = None
+    username: str | None = None
+    password: str | None = None
+    mountpoint: str | None = None
+    version: int | None = None
 
     @classmethod
     def create_from_uri(cls, uri):
@@ -77,10 +77,10 @@ class NtripClient:
         cls,
         host: str = "www.euref-ip.net",
         port: int = 2101,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        mountpoint: Optional[str] = None,
-        version: Optional[int] = None,
+        username: str | None = None,
+        password: str | None = None,
+        mountpoint: str | None = None,
+        version: int | None = None,
     ):
         """Convenience constructor.
 
@@ -131,7 +131,7 @@ class NtripClient:
         self.connection_info = connection_info
 
     async def get_stream(
-        self, mountpoint: Optional[str] = None, timeout: float = 10
+        self, mountpoint: str | None = None, timeout: float = 10
     ) -> Response:
         """Returns a file-like object that will stream the DGPS data from
         the NTRIP caster.
@@ -179,7 +179,7 @@ class NtripClient:
                 "expected Content-type: gnss/data, got {0!r}".format(observed_value)
             )
 
-    def _url_for_mountpoint(self, mountpoint: Optional[str] = None) -> bytes:
+    def _url_for_mountpoint(self, mountpoint: str | None = None) -> bytes:
         """Returns the URL of the given mountpoint.
 
         Parameters:
@@ -236,8 +236,8 @@ class NtripClient:
 )
 def ntrip_streamer(
     url: str,
-    username: Optional[str] = None,
-    password: Optional[str] = None,
+    username: str | None = None,
+    password: str | None = None,
     format: str = "raw",
     coord: str = "",
 ):
@@ -260,7 +260,7 @@ def ntrip_streamer(
     from time import monotonic
 
     try:
-        from trio import open_nursery, run, sleep, TASK_STATUS_IGNORED
+        from trio import TASK_STATUS_IGNORED, open_nursery, run, sleep
     except ImportError:
         raise ImportError(
             "You need to install 'trio' to use the NTRIP streamer"

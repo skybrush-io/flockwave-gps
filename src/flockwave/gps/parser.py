@@ -2,7 +2,7 @@
 receiver.
 """
 
-from typing import Any, Callable, Iterable, Optional, Protocol, TypeVar
+from typing import Any, Callable, Iterable, Protocol, TypeVar
 
 from .nmea.parser import NMEAParser
 from .rtcm.parsers import RTCMV2Parser, RTCMV3Parser
@@ -43,7 +43,7 @@ def _null_parser(data: bytes) -> Iterable[Any]:
 
 
 def create_gps_parser(
-    formats: Optional[Iterable[str]] = None,
+    formats: Iterable[str] | None = None,
 ) -> Callable[[bytes], Iterable[Any]]:
     """Creates a combined parser that can parse multiple GPS message formats
     simultaneously. This is commonly used with serial connections to GPS

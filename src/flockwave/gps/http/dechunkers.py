@@ -4,7 +4,6 @@ normal byte stream.
 
 from abc import ABCMeta, abstractmethod
 from enum import Enum
-from typing import Optional
 
 __all__ = ("NullDechunker", "ResponseDechunker")
 
@@ -71,7 +70,7 @@ class ResponseDechunker(Dechunker):
         self._chunk_length = 0
         self._state = ResponseDechunkerState.START
 
-    def _feed_byte(self, byte: int) -> Optional[int]:
+    def _feed_byte(self, byte: int) -> int | None:
         if self._state == ResponseDechunkerState.START:
             if byte == 13:
                 self._state = ResponseDechunkerState.HEADER_ENDING

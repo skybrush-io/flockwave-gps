@@ -1,6 +1,6 @@
 """Satellite position correction data related classes."""
 
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 
 class CorrectionData(
@@ -11,9 +11,9 @@ class CorrectionData(
 ):
     """Satellite position correction data in an RTCM v2 packet."""
 
-    _scale_factor: Optional[float]
-    _scaled_prc: Optional[float]
-    _scaled_prrc: Optional[float]
+    _scale_factor: float | None
+    _scaled_prc: float | None
+    _scaled_prrc: float | None
 
     def __init__(self, *args, **kwds):
         """Constructor."""

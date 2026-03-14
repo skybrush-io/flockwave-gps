@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from .nmea.packet import create_nmea_packet
 
@@ -23,7 +23,7 @@ def format_gps_coordinate(coord: GPSCoordinate) -> str:
 
 
 def format_gps_coordinate_as_nmea_gga_message(
-    coord: GPSCoordinate, *, time: Optional[datetime] = None
+    coord: GPSCoordinate, *, time: datetime | None = None
 ) -> str:
     """Formats a GPS coordinate into an NMEA GGA message."""
     if time is None:

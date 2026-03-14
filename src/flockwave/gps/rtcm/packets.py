@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from bitstring import pack, BitStream
 from typing import (
     Any,
     Generic,
-    Optional,
     Protocol,
     Sequence,
-    TypeVar,
     TypedDict,
+    TypeVar,
     Union,
 )
+
+from bitstring import BitStream, pack
 
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
 from flockwave.gps.vectors import ECEFCoordinate
@@ -84,9 +84,9 @@ class RTCMV2Packet:
 
     def __init__(
         self,
-        packet_type: Optional[int] = None,
-        station_id: Optional[int] = None,
-        bytes: Optional[bytes] = None,
+        packet_type: int | None = None,
+        station_id: int | None = None,
+        bytes: bytes | None = None,
     ):
         """Constructor.
 
@@ -174,8 +174,8 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
 
     def __init__(
         self,
-        station_id: Optional[int] = None,
-        corrections: Optional[list[CorrectionData]] = None,
+        station_id: int | None = None,
+        corrections: list[CorrectionData] | None = None,
     ):
         """Constructor.
 
@@ -216,8 +216,9 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
                 )
             if correction.svid > 32:
                 raise ValueError(
-                    "correction data SVID must not be "
-                    "larger than 32, got {0}".format(correction.svid)
+                    "correction data SVID must not be larger than 32, got {0}".format(
+                        correction.svid
+                    )
                 )
             bits += pack(
                 "uint:1, uint:2, uint:5, intbe:16, int:8, uint:8",
@@ -240,7 +241,7 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
     ECEF coordinates.
     """
 
-    position: Optional[ECEFCoordinate]
+    position: ECEFCoordinate | None
 
     @classmethod
     def create(cls, packet_type: int, station_id: int, bitstream: BitStream):
@@ -263,8 +264,8 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
 
     def __init__(
         self,
-        station_id: Optional[int] = None,
-        position: Optional[ECEFCoordinate] = None,
+        station_id: int | None = None,
+        position: ECEFCoordinate | None = None,
     ):
         """Constructor.
 
@@ -298,8 +299,8 @@ class RTCMV3Packet:
 
     _packet_classes: dict[int, RTCMV3PacketFactory] = {}
 
-    packet_type: Optional[int]
-    bytes: Optional[bytes]
+    packet_type: int | None
+    bytes: bytes | None
 
     @classmethod
     def create(cls, bitstream: BitStream) -> RTCMV3Packet:
@@ -332,9 +333,7 @@ class RTCMV3Packet:
 
         return decorator
 
-    def __init__(
-        self, packet_type: Optional[int] = None, bytes: Optional[bytes] = None
-    ):
+    def __init__(self, packet_type: int | None = None, bytes: bytes | None = None):
         """Constructor.
 
         Parameters:
@@ -366,7 +365,7 @@ class RTCMV3GPSSatelliteInfo:
     svid: int
     id: str
     l1: dict[str, Any]
-    l2: Optional[dict[str, Any]]
+    l2: dict[str, Any] | None
     temp_corrs: dict[str, Any]
 
     @classmethod
@@ -496,7 +495,7 @@ class RTCMV3GLONASSSatelliteInfo:
     svid: int
     id: str
     l1: dict[str, Any]
-    l2: Optional[dict[str, Any]]
+    l2: dict[str, Any] | None
     temp_corrs: dict[str, Any]
 
     @classmethod
@@ -611,7 +610,7 @@ class RTCMV3GLONASSSatelliteInfo:
 
 class RTCMV3MSMSignal(TypedDict):
     id: int
-    cnr: Optional[float]
+    cnr: float | None
 
 
 class RTCMV3MSMSatelliteInfo:
@@ -620,11 +619,11 @@ class RTCMV3MSMSatelliteInfo:
     svid: int
     id: str
     signals: list[RTCMV3MSMSignal]
-    cnr: Optional[float]
+    cnr: float | None
     range: float
-    extended_info: Optional[int]
+    extended_info: int | None
     rng_m: int
-    rate: Optional[int]
+    rate: int | None
 
     def __init__(self, svid: int, prefix: str):
         self.svid = svid
@@ -759,7 +758,7 @@ class SatelliteContainerMixin(Generic[T]):
 
     satellites: list[T]
 
-    def best_satellites(self, count: Optional[int] = None) -> list[T]:
+    def best_satellites(self, count: int | None = None) -> list[T]:
         """Returns the given number of satellites from the satellite info
         structure with the best signal-to-noise ratios.
         """
@@ -855,7 +854,7 @@ class RTCMV3StationaryAntennaPacket(RTCMV3Packet):
     system: int
     is_reference_station: bool
     single_receiver: bool
-    antenna_height: Optional[float]
+    antenna_height: float | None
     position: ECEFCoordinate
 
     @classmethod
@@ -924,7 +923,7 @@ class RTCMV3AntennaDescriptorPacket(RTCMV3Packet):
     station_id: int
     descriptor: str
     setup_id: int
-    serial: Optional[str]
+    serial: str | None
 
     @classmethod
     def create(cls, packet_type: int, bitstream: BitStream):

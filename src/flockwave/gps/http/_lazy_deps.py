@@ -2,8 +2,6 @@
 # top level because we will derive a class from it. That's why this module
 # is marked entirely as lazy as _this_ module must be imported lazily.
 
-from typing import Optional
-
 from trio.abc import ReceiveStream
 
 __all__ = ("PushbackStreamWrapper",)
@@ -32,7 +30,7 @@ class PushbackStreamWrapper(ReceiveStream):
     def push_back(self, data: bytes) -> None:
         self._remainder = bytearray(data) + self._remainder
 
-    async def receive_some(self, max_bytes: Optional[int] = None) -> bytes:
+    async def receive_some(self, max_bytes: int | None = None) -> bytes:
         if self._remainder:
             available = len(self._remainder)
             to_return = (

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+
 from pytest import mark
 
 from flockwave.gps.formatting import (
@@ -63,7 +63,7 @@ def test_format_longitude_for_nmea_gga_message(input: float, output: tuple[str, 
     ],
 )
 def test_format_gps_coordinate_as_nmea_gga_message(
-    lat: float, lon: float, alt: Optional[float], time: datetime, output: str
+    lat: float, lon: float, alt: float | None, time: datetime, output: str
 ):
     coord = GPSCoordinate(lat, lon, amsl=alt)
     sentence = format_gps_coordinate_as_nmea_gga_message(coord, time=time)

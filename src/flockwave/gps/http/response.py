@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Generator, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator
 
 from .dechunkers import Dechunker, NullDechunker, ResponseDechunker
 from .errors import (
@@ -25,7 +25,7 @@ class LineReader:
 
     stream: ReceiveStream
     _buffer: bytearray
-    _line_generator: Generator[Optional[bytes], Optional[bytes], None]
+    _line_generator: Generator[bytes | None, bytes | None, None]
 
     def __init__(self, stream: ReceiveStream, max_line_length: int = 16384):
         self.stream = stream
@@ -36,7 +36,7 @@ class LineReader:
     @staticmethod
     def generate_lines(
         max_line_length: int, buffer: bytearray
-    ) -> Generator[Optional[bytes], Optional[bytes], None]:
+    ) -> Generator[bytes | None, bytes | None, None]:
         buf = buffer or bytearray()
         find_start = 0
         while True:
@@ -82,9 +82,9 @@ class Response:
 
     _stream: Stream
     _pushback_stream: ReceiveStream
-    _headers: Optional[dict[str, bytes]]
-    _protocol: Optional[bytes]
-    _dechunker: Optional[Dechunker]
+    _headers: dict[str, bytes] | None
+    _protocol: bytes | None
+    _dechunker: Dechunker | None
 
     def __init__(self, stream: Stream):
         """Constructor.
@@ -164,9 +164,7 @@ class Response:
             await self._read_headers()
             self._process_headers()
 
-    def getheader(
-        self, header: str, default: Optional[bytes] = None
-    ) -> Optional[bytes]:
+    def getheader(self, header: str, default: bytes | None = None) -> bytes | None:
         """Returns the value of the given header or the given default value,
         assuming that the headers are already processed.
 
@@ -199,7 +197,7 @@ class Response:
         assert self._protocol is not None, "Headers are not processed yet"
         return self._protocol
 
-    async def receive_some(self, max_bytes: Optional[int] = None) -> bytes:
+    async def receive_some(self, max_bytes: int | None = None) -> bytes:
         """Reads the given number of bytes from the response.
 
         Parameters:

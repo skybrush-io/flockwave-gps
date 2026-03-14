@@ -1,14 +1,14 @@
 """Writer objects that write RTCM V2 or V3 messages."""
 
-from bitstring import BitArray, pack
 from itertools import cycle
-from typing import Callable, Optional, Union
+from typing import Callable, Union
+
+from bitstring import BitArray, pack
 
 from flockwave.gps.crc import crc24q
 
 from .packets import RTCMPacket, RTCMV2Packet, RTCMV3Packet
 from .utils import count_bits
-
 
 __all__ = ("RTCMV2Encoder", "RTCMV3Encoder")
 
@@ -39,7 +39,7 @@ class RTCMV2Encoder:
     def encode(
         self,
         message: RTCMV2Packet,
-        time_of_week: Optional[int] = None,
+        time_of_week: int | None = None,
         add_parities: bool = True,
     ) -> bytes:
         """Encodes the given message into a bytes object.
@@ -160,7 +160,7 @@ class RTCMV2Encoder:
                 attribute is not ``None``.
         """
         if len(bits) % 8 != 0:
-            raise ValueError("bit array length must be divisible by 8 at " "this point")
+            raise ValueError("bit array length must be divisible by 8 at this point")
 
         if time_of_week is None:
             mod_z_count = message.modified_z_count
@@ -169,7 +169,7 @@ class RTCMV2Encoder:
 
         if mod_z_count is None:
             raise ValueError(
-                "cannot encode this message without knowing " "the GPS time of week"
+                "cannot encode this message without knowing the GPS time of week"
             )
 
         num_data_words = len(bits) // 24
@@ -182,7 +182,7 @@ class RTCMV2Encoder:
         health = 0  # assume UDRE scale factor = 1.0
 
         header = pack(
-            "uint:8, uint:6, uint:10, uint:13, uint:3, uint:5, " "uint:3",
+            "uint:8, uint:6, uint:10, uint:13, uint:3, uint:5, uint:3",
             self.PREAMBLE,
             message.packet_type,
             message.station_id,

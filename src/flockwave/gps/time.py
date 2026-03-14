@@ -6,7 +6,6 @@ converter at https://www.gw-openscience.org/gps/
 
 from bisect import bisect
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 __all__ = (
     "current_gps_week",
@@ -107,9 +106,7 @@ def gps_time_to_utc(timestamp: float) -> datetime:
     return result.replace(tzinfo=timezone.utc)
 
 
-def gps_time_of_week_to_utc(
-    seconds: float = 0, *, week: Optional[int] = None
-) -> datetime:
+def gps_time_of_week_to_utc(seconds: float = 0, *, week: int | None = None) -> datetime:
     """Converts a GPS timestamp expressed as the number of seconds since the
     beginning of the current (GPS) week and the GPS week number into a
     timezone-aware UTC datetime object.

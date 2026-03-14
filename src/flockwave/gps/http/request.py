@@ -1,7 +1,7 @@
 """Simple HTTP request object for the low-level HTTP library."""
 
 from io import BytesIO
-from typing import Optional, OrderedDict
+from typing import OrderedDict
 from urllib.parse import quote, urlparse
 
 from .response import Response
@@ -12,7 +12,7 @@ __all__ = ("Request",)
 class Request:
     """HTTP request object."""
 
-    data: Optional[bytes]
+    data: bytes | None
     """The data to send in the body of the HTTP request."""
 
     headers: OrderedDict[str, bytes]
@@ -21,8 +21,8 @@ class Request:
     def __init__(
         self,
         url: bytes,
-        data: Optional[bytes] = None,
-        headers: Optional[dict[str, bytes]] = None,
+        data: bytes | None = None,
+        headers: dict[str, bytes] | None = None,
     ):
         """Constructs a new HTTP request object.
 

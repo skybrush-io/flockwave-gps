@@ -1,7 +1,7 @@
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Awaitable, Callable, Iterable, Optional, Union
+from typing import Any, Awaitable, Callable, Iterable, Union
 
 from flockwave.gps.enums import GNSSType
 from flockwave.gps.vectors import ECEFCoordinate
@@ -26,7 +26,7 @@ class RTKSurveySettings:
 
     #: Position of the base station, in ECEF coordinates, if known; `None` if
     #: the position is not known and the base station has to measure it.
-    position: Optional[ECEFCoordinate] = None
+    position: ECEFCoordinate | None = None
 
     #: Minimum duration of the survey, in seconds
     duration: float = 60
@@ -41,7 +41,7 @@ class RTKSurveySettings:
 
     #: GNSS types to configure the survey for; `None` means to configure all
     #: supported GNSS types
-    gnss_types: Optional[set[GNSSType]] = None
+    gnss_types: set[GNSSType] | None = None
 
     #: Fixed position
     @classmethod
@@ -81,7 +81,7 @@ class RTKSurveySettings:
         self.message_set = RTKMessageSet.MSM7
         self.gnss_types = None
 
-    def set_gnss_types(self, types: Optional[Iterable[Union[str, GNSSType]]]) -> None:
+    def set_gnss_types(self, types: Iterable[Union[str, GNSSType]] | None) -> None:
         if types is None:
             self.gnss_types = None
         else:

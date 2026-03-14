@@ -2,23 +2,22 @@
 
 from abc import ABCMeta, abstractmethod
 from builtins import bytes, range
-from bitstring import ConstBitStream
 from enum import Enum
 from typing import (
     Any,
     Callable,
     Generic,
     Iterable,
-    Optional,
     TypeVar,
     Union,
 )
+
+from bitstring import ConstBitStream
 
 from flockwave.gps.crc import crc24q
 
 from .errors import ChecksumError
 from .packets import RTCMPacket, RTCMV2Packet, RTCMV3Packet
-
 
 __all__ = (
     "create_rtcm_parser",
@@ -71,7 +70,7 @@ class RTCMParser(Generic[T], metaclass=ABCMeta):
 class RTCMParserBase(RTCMParser[T]):
     """Base class for RTCM V2 and V3 parsers."""
 
-    def __init__(self, max_packet_length: Optional[int] = None):
+    def __init__(self, max_packet_length: int | None = None):
         """Constructor.
 
         :param callback: a function to call for each successfully decoded
@@ -102,7 +101,7 @@ class RTCMParserBase(RTCMParser[T]):
         return result
 
     @abstractmethod
-    def _feed_byte(self, byte: int) -> Optional[T]:
+    def _feed_byte(self, byte: int) -> T | None:
         """Feeds a new byte to the parser.
 
         Returns a parsed packet if the new byte resulted in a full packet, or
@@ -188,7 +187,7 @@ class RTCMV2Parser(RTCMParserBase[RTCMV2Packet]):
         else:
             return False
 
-    def _feed_byte(self, byte: int) -> Optional[RTCMV2Packet]:
+    def _feed_byte(self, byte: int) -> RTCMV2Packet | None:
         if byte & 0xC0 != 0x40:
             # Reset the parser if the upper two bits != 01
             self.reset()
@@ -314,7 +313,7 @@ class RTCMV3Parser(RTCMParserBase[RTCMV3Packet]):
         """
         return crc24q(packet) == (parity[0] << 16) + (parity[1] << 8) + (parity[2])
 
-    def _feed_byte(self, byte: int) -> Optional[RTCMV3Packet]:
+    def _feed_byte(self, byte: int) -> RTCMV3Packet | None:
         if self._state == RTCMV3ParserState.START:
             # Just waiting for the preamble
             if byte != self.PREAMBLE:
@@ -402,7 +401,7 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
     """
 
     _subparsers: list[RTCMParserBase[Any]]
-    _chosen_subparser: Optional[RTCMParserBase[Any]]
+    _chosen_subparser: RTCMParserBase[Any] | None
     _pending_checksum_errors: list[tuple[RTCMParserBase, ChecksumError]]
 
     def __init__(self, *args, **kwds):
@@ -461,7 +460,7 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
 
         return result
 
-    def _feed_byte(self, byte: int) -> Optional[RTCMPacket]:
+    def _feed_byte(self, byte: int) -> RTCMPacket | None:
         """Feeds a new byte to the parser."""
         if self._chosen_subparser is not None:
             return self._chosen_subparser._feed_byte(byte)
@@ -478,7 +477,7 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
 
     def _process_pending_checksum_errors(
         self,
-    ) -> tuple[Iterable[RTCMPacket], Optional[RTCMParserBase]]:
+    ) -> tuple[Iterable[RTCMPacket], RTCMParserBase | None]:
         """Processes unprocessed checksum errors from subparsers to see
         if any of the recovery attempts yield proper packets. Returns a
         list of the recovered packets, or an empty list if there was
@@ -518,8 +517,8 @@ def create_rtcm_parser(
 
 
 def main():
-    from contextlib import ExitStack
     import sys
+    from contextlib import ExitStack
 
     parser = create_rtcm_parser("rtcm3")
     with ExitStack() as stack:

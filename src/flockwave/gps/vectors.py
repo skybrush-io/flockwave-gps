@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from math import atan2, cos, degrees, radians, sin, sqrt
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from .constants import WGS84
-
 
 __all__ = (
     "GPSCoordinate",
@@ -31,15 +30,15 @@ class AltitudeMixin:
     appropriate getters and setters.
     """
 
-    _agl: Optional[float]
-    _ahl: Optional[float]
-    _amsl: Optional[float]
+    _agl: float | None
+    _ahl: float | None
+    _amsl: float | None
 
     def __init__(
         self,
-        amsl: Optional[float] = None,
-        ahl: Optional[float] = None,
-        agl: Optional[float] = None,
+        amsl: float | None = None,
+        ahl: float | None = None,
+        agl: float | None = None,
     ):
         """Constructor."""
         self._agl = None
@@ -50,30 +49,30 @@ class AltitudeMixin:
         self.amsl = amsl
 
     @property
-    def agl(self) -> Optional[float]:
+    def agl(self) -> float | None:
         """The relative altitude above ground level."""
         return self._agl
 
     @agl.setter
-    def agl(self, value: Optional[float]) -> None:
+    def agl(self, value: float | None) -> None:
         self._agl = float(value) if value is not None else None
 
     @property
-    def ahl(self) -> Optional[float]:
+    def ahl(self) -> float | None:
         """The relative altitude above home level."""
         return self._ahl
 
     @ahl.setter
-    def ahl(self, value: Optional[float]) -> None:
+    def ahl(self, value: float | None) -> None:
         self._ahl = float(value) if value is not None else None
 
     @property
-    def amsl(self) -> Optional[float]:
+    def amsl(self) -> float | None:
         """The absolute altitude above mean sea level."""
         return self._amsl
 
     @amsl.setter
-    def amsl(self, value: Optional[float]) -> None:
+    def amsl(self, value: float | None) -> None:
         self._amsl = float(value) if value is not None else None
 
 
@@ -133,10 +132,10 @@ class Vector3D:
 
     def update(
         self,
-        x: Optional[float] = None,
-        y: Optional[float] = None,
-        z: Optional[float] = None,
-        precision: Optional[int] = None,
+        x: float | None = None,
+        y: float | None = None,
+        z: float | None = None,
+        precision: int | None = None,
     ) -> None:
         """Updates the coordinates of this object.
 
@@ -159,7 +158,7 @@ class Vector3D:
         if precision is not None:
             self.round(precision)
 
-    def update_from(self, other: Vector3D, precision: Optional[int] = None) -> None:
+    def update_from(self, other: Vector3D, precision: int | None = None) -> None:
         """Updates the coordinates of this object from another instance
         of Vector3D_.
 
@@ -318,10 +317,10 @@ class VelocityNED(Vector3D):
 
     def update(
         self,
-        north: Optional[float] = None,
-        east: Optional[float] = None,
-        down: Optional[float] = None,
-        precision: Optional[int] = None,
+        north: float | None = None,
+        east: float | None = None,
+        down: float | None = None,
+        precision: int | None = None,
     ) -> None:
         """Updates the coordinates of this object.
 
@@ -429,9 +428,9 @@ class GPSCoordinate(AltitudeMixin):
         self,
         lat: float = 0.0,
         lon: float = 0.0,
-        amsl: Optional[float] = None,
-        ahl: Optional[float] = None,
-        agl: Optional[float] = None,
+        amsl: float | None = None,
+        ahl: float | None = None,
+        agl: float | None = None,
     ):
         """Constructor.
 
@@ -508,12 +507,12 @@ class GPSCoordinate(AltitudeMixin):
 
     def update(
         self,
-        lat: Optional[float] = None,
-        lon: Optional[float] = None,
-        amsl: Optional[float] = None,
-        ahl: Optional[float] = None,
-        agl: Optional[float] = None,
-        precision: Optional[int] = None,
+        lat: float | None = None,
+        lon: float | None = None,
+        amsl: float | None = None,
+        ahl: float | None = None,
+        agl: float | None = None,
+        precision: int | None = None,
     ) -> None:
         """Updates the coordinates of this object.
 
@@ -542,9 +541,7 @@ class GPSCoordinate(AltitudeMixin):
         if precision is not None:
             self.round(precision)
 
-    def update_from(
-        self, other: GPSCoordinate, precision: Optional[int] = None
-    ) -> None:
+    def update_from(self, other: GPSCoordinate, precision: int | None = None) -> None:
         """Updates the coordinates of this object from another instance
         of GPSCoordinate_.
 
@@ -585,9 +582,9 @@ class FlatEarthCoordinate(AltitudeMixin):
         self,
         x: float = 0.0,
         y: float = 0.0,
-        amsl: Optional[float] = None,
-        ahl: Optional[float] = None,
-        agl: Optional[float] = None,
+        amsl: float | None = None,
+        ahl: float | None = None,
+        agl: float | None = None,
     ):
         """Constructor.
 
@@ -637,12 +634,12 @@ class FlatEarthCoordinate(AltitudeMixin):
 
     def update(
         self,
-        x: Optional[float] = None,
-        y: Optional[float] = None,
-        amsl: Optional[float] = None,
-        ahl: Optional[float] = None,
-        agl: Optional[float] = None,
-        precision: Optional[int] = None,
+        x: float | None = None,
+        y: float | None = None,
+        amsl: float | None = None,
+        ahl: float | None = None,
+        agl: float | None = None,
+        precision: int | None = None,
     ) -> None:
         """Updates the coordinates of this object.
 
@@ -671,7 +668,7 @@ class FlatEarthCoordinate(AltitudeMixin):
         if precision is not None:
             self.round(precision)
 
-    def update_from(self, other: FlatEarthCoordinate, precision: Optional[int] = None):
+    def update_from(self, other: FlatEarthCoordinate, precision: int | None = None):
         """Updates the coordinates of this object from another instance
         of FlatEarthCoordinate_.
 
@@ -716,7 +713,7 @@ class ECEFToGPSCoordinateTransformation:
     _eq_radius: float
     _polar_radius: float
 
-    def __init__(self, radii: Optional[tuple[float, float]] = None):
+    def __init__(self, radii: tuple[float, float] | None = None):
         """Constructor.
 
         Parameters:
@@ -765,7 +762,7 @@ class ECEFToGPSCoordinateTransformation:
         """
         if coord.amsl is None:
             raise ValueError(
-                "GPS coordinates need an altitude relative " "to the mean sea level"
+                "GPS coordinates need an altitude relative to the mean sea level"
             )
 
         lat, lon = radians(coord.lat), radians(coord.lon)
@@ -847,7 +844,7 @@ class FlatEarthToGPSCoordinateTransformation:
 
     def __init__(
         self,
-        origin: Optional[GPSCoordinate] = None,
+        origin: GPSCoordinate | None = None,
         orientation: float = 0,
         type: str = "nwu",
     ):
