@@ -6,42 +6,31 @@ authors = [{ name = "Tamas Nepusz", email = "tamas@collmot.com" }]
 license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
-    "bitstring>=4.0.1",
-    "pynmea2>=1.19.0"
+  "bitstring>=4.0.1",
+  "pynmea2>=1.19.0"
 ]
 
 [project.optional-dependencies]
 cli = [
-    "click>=8.1.0",
-    "trio>=0.24.0"
+  "click>=8.1.0",
+  "trio>=0.30.0"
 ]
-ntrip = [
-    "trio>=0.24.0"
+ntrip = ["trio>=0.30.0"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.5",
+  "pytest-cov>=6.1.1",
+  "coverage[toml]>=7.8.0"
 ]
 
-[tool.poetry]
-packages = [
-    { include = "flockwave", from = "src" }
-]
+[tool.uv.build-backend]
+module-name = "flockwave.gps"
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.5"
-pytest-cov = "^6.1.1"
-coverage = {extras = ["toml"], version = "^7.8.0"}
-
-[[tool.poetry.source]]
-name = "PyPI"
-priority = "primary"
-
-[[tool.poetry.source]]
-name = "collmot"
-url = "https://pypi.collmot.com/simple/"
-priority = "explicit"
-
-[[tool.poetry.source]]
+[[tool.uv.index]]
 name = "fury"
 url = "https://pypi.fury.io/skybrush/"
-priority = "supplemental"
+publish-url = "https://pypi.fury.io/skybrush/"
 
 [tool.coverage.paths]
 source = ["src"]
@@ -58,5 +47,5 @@ lint.ignore = ["B905", "C901", "E402", "E501"]
 lint.select = ["B", "C", "E", "F", "W"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.10,<0.11"]
+build-backend = "uv_build"
