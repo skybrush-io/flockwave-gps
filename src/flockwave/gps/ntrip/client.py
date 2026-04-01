@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Awaitable, Callable
 from urllib.parse import urlparse
 
 import click
-
 from flockwave.gps.formatting import format_gps_coordinate_as_nmea_gga_message
 from flockwave.gps.http import Request
 from flockwave.gps.vectors import GPSCoordinate

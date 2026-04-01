@@ -260,7 +260,6 @@ def test_rtk_base_configuration() -> None:
 
     async def main() -> None:
         from flockwave.connections.serial import SerialPortStream
-
         from flockwave.gps.parser import create_gps_parser
 
         port = await SerialPortStream.create(

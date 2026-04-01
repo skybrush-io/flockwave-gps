@@ -13,7 +13,6 @@ from typing import (
 )
 
 from bitstring import BitArray, BitStream, ConstBitStream, pack
-
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
 from flockwave.gps.vectors import ECEFCoordinate
 

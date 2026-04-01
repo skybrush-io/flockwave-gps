@@ -1,8 +1,7 @@
-from pytest import raises
-
 from flockwave.gps.enums import GNSSType
 from flockwave.gps.rtk import RTKMessageSet, RTKSurveySettings
 from flockwave.gps.vectors import ECEFCoordinate
+from pytest import raises
 
 
 def test_rtk_survey_settings_to_and_from_json():

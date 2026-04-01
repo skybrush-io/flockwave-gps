@@ -4,7 +4,6 @@ from itertools import cycle
 from typing import Callable
 
 from bitstring import BitArray, pack
-
 from flockwave.gps.crc import crc24q
 
 from .packets import RTCMPacket, RTCMV2Packet, RTCMV3Packet

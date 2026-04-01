@@ -12,7 +12,6 @@ from typing import (
 )
 
 from bitstring import ConstBitStream
-
 from flockwave.gps.crc import crc24q
 
 from .errors import ChecksumError
