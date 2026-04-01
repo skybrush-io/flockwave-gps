@@ -10,7 +10,7 @@ from flockwave.gps.rtk import RTKBaseConfigurator, RTKMessageSet, RTKSurveySetti
 
 from .encoder import create_ubx_encoder
 from .enums import UBXClass, UBXNAVSubclass
-from .packet import UBX
+from .packet import UBX, UBXPacket
 
 __all__ = ("UBXRTKBaseConfigurator",)
 
@@ -36,11 +36,11 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
         """
         encoder = create_ubx_encoder()
 
-        async def send(message, delay=0.2):
+        async def send(message: UBXPacket, delay: float = 0.2):
             await write(encoder(message))
             await sleep(delay)
 
-        async def set_message_rate(class_id, subclass_id, rate):
+        async def set_message_rate(class_id: int, subclass_id: int, rate: int):
             # Set message rates for ports 1 and 3; all other ports in the range
             # 0-5 are silenced
             payload = bytes([int(class_id), subclass_id, 0, rate, 0, rate, 0, 0])
@@ -260,6 +260,7 @@ def test_rtk_base_configuration() -> None:
 
     async def main() -> None:
         from flockwave.connections.serial import SerialPortStream
+
         from flockwave.gps.parser import create_gps_parser
 
         port = await SerialPortStream.create(
