@@ -56,7 +56,7 @@ class LineReader:
                 del buf[: newline_idx + 1]
                 # next time, start the search from the beginning
                 find_start = 0
-                more_data = yield line
+                more_data = yield bytes(line)
 
             if more_data is not None:
                 buf += bytes(more_data)

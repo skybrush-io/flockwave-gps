@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from math import atan2, cos, degrees, radians, sin, sqrt
-from typing import Any, TypeVar
+from typing import Any, Sequence, TypeVar
 
 from .constants import WGS84
 
@@ -251,7 +251,7 @@ class PositionXYZ(Vector3D):
     """
 
     @classmethod
-    def from_json(cls, data: list[float]):
+    def from_json(cls, data: Sequence[float]):
         """Creates an XYZ position vector from its JSON representation."""
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
@@ -274,7 +274,7 @@ class VelocityXYZ(Vector3D):
     """
 
     @classmethod
-    def from_json(cls, data: list[float]):
+    def from_json(cls, data: Sequence[float]):
         """Creates an XYZ position vector from its JSON representation."""
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
@@ -299,7 +299,7 @@ class VelocityNED(Vector3D):
     """
 
     @classmethod
-    def from_json(cls, data: list[float]):
+    def from_json(cls, data: Sequence[float]):
         """Creates a NED velocity vector from its JSON representation."""
         return cls(north=data[0] * 1e-3, east=data[1] * 1e-3, down=data[2] * 1e-3)
 
@@ -321,7 +321,7 @@ class VelocityNED(Vector3D):
         east: float | None = None,
         down: float | None = None,
         precision: int | None = None,
-    ) -> None:
+    ) -> None:  # ty:ignore[invalid-method-override]
         """Updates the coordinates of this object.
 
         Parameters:

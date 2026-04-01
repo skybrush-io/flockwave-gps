@@ -1,5 +1,7 @@
 """CRC code calculation routines."""
 
+from typing import Sequence
+
 __all__ = ("crc24q",)
 
 
@@ -263,7 +265,7 @@ _crc24q_table = [
 ]
 
 
-def crc24q(array: bytes, init: int = 0) -> int:
+def crc24q(array: Sequence[int], init: int = 0) -> int:
     """Calculates the CRC24Q checksum of the given byte array.
 
     Parameters:

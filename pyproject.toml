@@ -7,7 +7,7 @@ license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
   "bitstring>=4.0.1",
-  "pynmea2>=1.19.0"
+  "pynmea2>=1.19.0",
 ]
 
 [project.optional-dependencies]
@@ -19,6 +19,7 @@ ntrip = ["trio>=0.30.0"]
 
 [dependency-groups]
 dev = [
+  "flockwave-conn[serial]>=9.0.0",
   "poethepoet>=0.42.1",
   "pytest>=8.3.5",
   "pytest-cov>=6.1.1",
@@ -34,6 +35,9 @@ module-name = "flockwave.gps"
 name = "fury"
 url = "https://pypi.fury.io/skybrush/"
 publish-url = "https://pypi.fury.io/skybrush/"
+
+[tool.uv.sources]
+flockwave-conn = { index = "fury" }
 
 [tool.coverage.paths]
 source = ["src"]

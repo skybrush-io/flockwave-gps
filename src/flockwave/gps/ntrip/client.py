@@ -36,7 +36,7 @@ class NtripClientConnectionInfo:
     version: int | None = None
 
     @classmethod
-    def create_from_uri(cls, uri):
+    def create_from_uri(cls, uri: str):
         """Creates a connection info object from a URI representation of the
         form::
 
@@ -56,8 +56,12 @@ class NtripClientConnectionInfo:
         fake_uri = "http://" + parts.netloc + parts.path
         parts = urlparse(fake_uri, scheme="http")
 
+        hostname = parts.hostname
+        if hostname is None:
+            raise ValueError(f"Invalid URI: {uri!r}")
+
         params = {
-            "host": parts.hostname,
+            "host": hostname,
             "port": parts.port or 2101,
             "username": parts.username,
             "password": parts.password,
@@ -348,4 +352,4 @@ def ntrip_streamer(
 
 
 if __name__ == "__main__":
-    ntrip_streamer()  # type: ignore
+    ntrip_streamer()

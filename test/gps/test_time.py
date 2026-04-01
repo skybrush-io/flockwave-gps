@@ -47,7 +47,9 @@ def test_gps_time_of_week_to_utc():
     # authoritative source: https://www.gw-openscience.org/gps/
     dt = gps_time_of_week_to_utc(138499, week=2129)
     assert f(dt) == "2020-10-26 14:28:01"
-    assert dt.tzinfo is not None and dt.utcoffset().total_seconds() == 0
+
+    offset = dt.utcoffset()
+    assert offset is not None and offset.total_seconds() == 0
 
 
 def test_unix_to_gps_time_of_week():

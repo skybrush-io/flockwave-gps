@@ -8,7 +8,7 @@ from flockwave.gps.ubx import (
 
 def test_encoder():
     encoder = create_ubx_encoder()
-    message = UBX.MON_VER()
+    message = UBX.MON_VER(b"")
 
     assert encoder(message) == b"\xb5b\n\x04\x00\x00\x0e4"
 

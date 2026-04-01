@@ -102,10 +102,8 @@ class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
         when no radii are given.
         """
         trans = ECEFToGPSCoordinateTransformation()
-        self.assertAlmostEqual(
-            (WGS84.EQUATORIAL_RADIUS_IN_METERS, WGS84.POLAR_RADIUS_IN_METERS),
-            trans.radii,
-        )
+        self.assertAlmostEqual(WGS84.EQUATORIAL_RADIUS_IN_METERS, trans.radii[0])
+        self.assertAlmostEqual(WGS84.POLAR_RADIUS_IN_METERS, trans.radii[1])
 
     def test_custom_ellipsoid_parameters(self):
         """Tests whether custom ellipsoid parameters work."""
@@ -132,9 +130,14 @@ class ECEFToGPSCoordinateTransformationTest(unittest.TestCase):
         # http://www.oc.nps.edu/oc2902w/coord/llhxyz.htm
         ecef_coord = ECEFCoordinate(x=4009873, y=1225941, z=4791313)
         gps_coord = trans.to_gps(ecef_coord)
+        amsl = gps_coord.amsl
+
+        self.assertTrue(amsl is not None)
+        assert amsl is not None
+
         self.assertAlmostEqual(49, gps_coord.lat, places=5)
         self.assertAlmostEqual(17, gps_coord.lon, places=5)
-        self.assertAlmostEqual(1000, gps_coord.amsl, places=0)
+        self.assertAlmostEqual(1000, amsl, places=0)
         self.assertTrue(gps_coord.ahl is None)
         self.assertTrue(gps_coord.agl is None)
 

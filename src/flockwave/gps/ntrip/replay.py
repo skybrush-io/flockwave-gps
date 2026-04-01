@@ -30,7 +30,14 @@ def ntrip_replayer(file, port: int = 5555, stdout: bool = False):
     from json import loads
 
     try:
-        from trio import BrokenResourceError, Path, open_nursery, run, serve_tcp, sleep
+        from trio import (
+            BrokenResourceError,
+            open_file,
+            open_nursery,
+            run,
+            serve_tcp,
+            sleep,
+        )
     except ImportError:
         raise ImportError(
             "You need to install 'trio' to use the NTRIP replayer"
@@ -41,8 +48,7 @@ def ntrip_replayer(file, port: int = 5555, stdout: bool = False):
 
     async def iter_contents_of(file: str) -> AsyncIterator[bytes]:
         while True:
-            fp = await Path(file).open("r")  # type: ignore
-            async with fp:
+            async with await open_file(file, "r") as fp:
                 async for line in fp:
                     obj = loads(line)
                     await sleep(obj["dt"] / 1000)

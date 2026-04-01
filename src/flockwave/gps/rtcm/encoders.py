@@ -1,7 +1,7 @@
 """Writer objects that write RTCM V2 or V3 messages."""
 
 from itertools import cycle
-from typing import Callable, Union
+from typing import Callable
 
 from bitstring import BitArray, pack
 
@@ -248,7 +248,7 @@ class RTCMV3Encoder:
         return data
 
 
-def create_rtcm_encoder(format: Union[int, str]) -> Callable[[RTCMPacket], bytes]:
+def create_rtcm_encoder(format: int | str) -> Callable[[RTCMPacket], bytes]:
     """Creates an RTCM encoder function that is suitable to be used in
     conjunction with the channels from the ``flockwave-conn`` module.
 

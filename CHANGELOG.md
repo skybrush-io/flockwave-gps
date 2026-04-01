@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-04-01
+
+### Breaking changes
+
+- Fixed a long-standing typing issue with `RTCMv2Packet` and `RTCMv3Packet` where the
+  `create()` class method was overridden in subclasses with a different signature,
+  violating the Liskov Substitution Principle. The `create()` methods were now removed
+  from the base classes; use the `create_rtcm2_packet()` and `create_rtcm3_packet()`
+  functions instead.
+
 ## [4.0.0] - 2025-04-20
 
 ### Breaking changes

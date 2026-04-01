@@ -12,7 +12,7 @@ from typing import (
     Union,
 )
 
-from bitstring import BitStream, pack
+from bitstring import BitArray, BitStream, ConstBitStream, pack
 
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
 from flockwave.gps.vectors import ECEFCoordinate
@@ -43,31 +43,6 @@ class RTCMV2Packet:
     """Data structure for RTCM V2 packets."""
 
     _packet_classes: dict[int, RTCMV2PacketFactory] = {}
-
-    @classmethod
-    def create(cls, bitstream: BitStream) -> RTCMV2Packet:
-        """Creates an RTCM V2 packet from a bit stream containing the payload
-        of the packet, without the preamble and the parity bits.
-        """
-
-        original_data = bitstream.tobytes()
-
-        packet_type: int = bitstream.read(6).uint
-        station_id: int = bitstream.read(10).uint
-        modified_z_count: int = bitstream.read(13).uint
-        bitstream.read(11)
-
-        packet_class = cls._packet_classes.get(packet_type)
-        if packet_class:
-            result = packet_class.create(packet_type, station_id, bitstream)
-        else:
-            result = cls(packet_type, station_id)
-
-        result.packet_type = packet_type
-        result.modified_z_count = modified_z_count
-        result.bytes = original_data
-
-        return result
 
     @classmethod
     def register(cls, *packet_types: int):
@@ -106,7 +81,7 @@ class RTCMV2Packet:
             "station_id={0.station_id!r}, bytes={0.bytes!r})>".format(self)
         )
 
-    def write_body(self, bits: BitStream):
+    def write_body(self, bits: BitArray):
         """Writes the *body* of this packet (without the header, the
         parities etc) into the given bit array.
 
@@ -120,8 +95,9 @@ class RTCMV2Packet:
 
 
 class RTCMV2PacketFactory(Protocol):
+    @classmethod
     def create(
-        self, packet_type: int, station_id: int, bitstream: BitStream
+        cls, packet_type: int, station_id: int, bitstream: ConstBitStream
     ) -> RTCMV2Packet: ...
 
 
@@ -132,7 +108,7 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
     corrections: Sequence[CorrectionData]
 
     @classmethod
-    def create(cls, packet_type: int, station_id: int, bitstream: BitStream):
+    def create(cls, packet_type: int, station_id: int, bitstream: ConstBitStream):
         """Creates an RTCM V2 full corrections packet from a bit stream that
         is supposed to be positioned after the header of the RTCM V2
         message.
@@ -199,7 +175,7 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
             "corrections={0.corrections!r})>".format(self)
         )
 
-    def write_body(self, bits: BitStream):
+    def write_body(self, bits: BitArray):
         """Writes the bits of a full corrections message (RTCM message type
         1) into a bit array.
         """
@@ -244,7 +220,7 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
     position: ECEFCoordinate | None
 
     @classmethod
-    def create(cls, packet_type: int, station_id: int, bitstream: BitStream):
+    def create(cls, packet_type: int, station_id: int, bitstream: ConstBitStream):
         """Creates an RTCM V2 GPS reference station parameters packet
         from a bit stream that is supposed to be positioned after the
         header of the RTCM V2 message.
@@ -282,7 +258,7 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
             "position={0.position!r})>".format(self)
         )
 
-    def write_body(self, bits: BitStream):
+    def write_body(self, bits: BitArray):
         """Writes the body of this packet to the end of the given bitstream.
 
         Parameters:
@@ -301,24 +277,6 @@ class RTCMV3Packet:
 
     packet_type: int | None
     bytes: bytes | None
-
-    @classmethod
-    def create(cls, bitstream: BitStream) -> RTCMV3Packet:
-        """Creates an RTCM V3 packet from a bit stream containing the payload
-        of the packet, without the preamble and the length bytes.
-        """
-        original_data = bitstream.tobytes()
-
-        packet_type: int = bitstream.read(12).uint
-        packet_class = cls._packet_classes.get(packet_type)
-        if packet_class:
-            result = packet_class.create(packet_type, bitstream)
-        else:
-            result = cls(packet_type)
-
-        result.packet_type = packet_type
-        result.bytes = original_data
-        return result
 
     @classmethod
     def register(cls, *packet_types: int):
@@ -351,7 +309,8 @@ class RTCMV3Packet:
 
 
 class RTCMV3PacketFactory(Protocol):
-    def create(self, packet_type: int, bitstream: BitStream) -> RTCMV3Packet: ...
+    @classmethod
+    def create(cls, packet_type: int, bitstream: ConstBitStream) -> RTCMV3Packet: ...
 
 
 class RTCMV3SatelliteInfo(Protocol):
@@ -369,7 +328,7 @@ class RTCMV3GPSSatelliteInfo:
     temp_corrs: dict[str, Any]
 
     @classmethod
-    def create(cls, bitstream: BitStream, is_extended: bool, has_l2: bool):
+    def create(cls, bitstream: ConstBitStream, is_extended: bool, has_l2: bool):
         """Creates a satellite info object from a bit stream that is supposed
         to be part of the body of an RTCMV3GPSRTKPacket_ packet (basic or
         extended).
@@ -499,7 +458,7 @@ class RTCMV3GLONASSSatelliteInfo:
     temp_corrs: dict[str, Any]
 
     @classmethod
-    def create(cls, bitstream: BitStream, is_extended: bool, has_l2: bool):
+    def create(cls, bitstream: ConstBitStream, is_extended: bool, has_l2: bool):
         """Creates a satellite info object from a bit stream that is supposed
         to be part of the body of an RTCMV3GLONASSRTKPacket_ packet (basic or
         extended).
@@ -638,7 +597,7 @@ class RTCMV3MSMSatelliteInfo:
     @staticmethod
     def update_satellite_data(
         objects: list[RTCMV3MSMSatelliteInfo],
-        bitstream: BitStream,
+        bitstream: ConstBitStream,
         is_high_resolution: bool = False,
     ):
         """Updates multiple satellite info object with the satellite-related
@@ -668,7 +627,7 @@ class RTCMV3MSMSatelliteInfo:
     @staticmethod
     def update_signal_data(
         objects: list[RTCMV3MSMSignal],
-        bitstream: BitStream,
+        bitstream: ConstBitStream,
         last_digit_of_packet_type: int,
     ):
         # TODO(ntamas): store these; see the RTKLIB source code for details
@@ -858,7 +817,7 @@ class RTCMV3StationaryAntennaPacket(RTCMV3Packet):
     position: ECEFCoordinate
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: BitStream):
+    def create(cls, packet_type: int, bitstream: ConstBitStream):
         """Creates an RTCM v3 stationary antenna packet from the given bit
         stream.
 
@@ -926,7 +885,7 @@ class RTCMV3AntennaDescriptorPacket(RTCMV3Packet):
     serial: str | None
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: BitStream):
+    def create(cls, packet_type: int, bitstream: ConstBitStream):
         """Creates an RTCM v3 antenna descriptor packet from the given bit
         stream.
 
@@ -951,7 +910,7 @@ class RTCMV3AntennaDescriptorPacket(RTCMV3Packet):
         return result
 
     @staticmethod
-    def _read_string(bitstream: BitStream):
+    def _read_string(bitstream: ConstBitStream):
         n = bitstream.read(8).uint
         return "".join(chr(bitstream.read(8).uint) for _ in range(n))
 
@@ -977,7 +936,7 @@ class RTCMV3GLONASSRTKPacket(
     smoothing_interval: int
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: BitStream):
+    def create(cls, packet_type: int, bitstream: ConstBitStream):
         assert packet_type in (1009, 1010, 1011, 1012)
 
         has_l2 = packet_type in (1011, 1012)
@@ -1066,7 +1025,7 @@ class RTCMV3GPSEphemerisPacket(RTCMV3Packet):
     fit: int
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: BitStream):
+    def create(cls, packet_type: int, bitstream: ConstBitStream):
         """Creates an RTCM v3 GPS ephemeris packet from the given bit
         stream.
 
@@ -1191,7 +1150,7 @@ class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
     firmware: str
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: BitStream):
+    def create(cls, packet_type: int, bitstream: ConstBitStream):
         """Creates an RTCM v3 extended antenna descriptor packet from the
         given bit stream.
 
@@ -1270,7 +1229,7 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteIn
     smoothing_interval: int
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: BitStream):
+    def create(cls, packet_type: int, bitstream: ConstBitStream):
         """Creates an RTCM v3 GPS MSM packet from the given bit stream.
 
         Parameters:
@@ -1398,4 +1357,59 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteIn
 
 
 #: Type alias for RTCMv2 and RTCMv3 packets
-RTCMPacket = Union[RTCMV2Packet, RTCMV3Packet]
+RTCMPacket = RTCMV2Packet | RTCMV3Packet
+
+
+def create_rtcm2_packet(bitstream: ConstBitStream) -> RTCMV2Packet:
+    """Creates an RTCM V2 packet from a bit stream containing the payload
+    of the packet, without the preamble and the parity bits.
+
+    Args:
+        bitstream: the bit stream to read the packet from
+
+    Returns:
+        the packet data parsed out of the bitstream
+    """
+    original_data = bitstream.tobytes()
+
+    packet_type: int = bitstream.read(6).uint
+    station_id: int = bitstream.read(10).uint
+    modified_z_count: int = bitstream.read(13).uint
+    bitstream.read(11)
+
+    packet_class = RTCMV2Packet._packet_classes.get(packet_type)
+    if packet_class:
+        result = packet_class.create(packet_type, station_id, bitstream)
+    else:
+        result = RTCMV2Packet(packet_type, station_id)
+
+    result.packet_type = packet_type
+    result.modified_z_count = modified_z_count
+    result.bytes = original_data
+
+    return result
+
+
+def create_rtcm3_packet(bitstream: ConstBitStream) -> RTCMV3Packet:
+    """Creates an RTCM V3 packet from a bit stream containing the payload
+    of the packet, without the preamble and the length bytes.
+
+    Args:
+        bitstream: the bit stream containing the body of the packet
+
+    Returns:
+        the packet data parsed out of the bitstream
+    """
+    original_data = bitstream.tobytes()
+
+    packet_type: int = bitstream.read(12).uint
+    packet_class = RTCMV3Packet._packet_classes.get(packet_type)
+    if packet_class:
+        result = packet_class.create(packet_type, bitstream)
+    else:
+        result = RTCMV3Packet(packet_type)
+
+    result.packet_type = packet_type
+    result.bytes = original_data
+
+    return result

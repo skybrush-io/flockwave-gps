@@ -1,7 +1,7 @@
-from typing import Sequence, Union
+from typing import Sequence
 
 
-def calculate_ubx_checksum(data: Union[bytes, Sequence[int]], offset: int = 2) -> bytes:
+def calculate_ubx_checksum(data: Sequence[int], offset: int = 2) -> bytes:
     """Calculates the checksum of a UBX packet."""
     a, b = 0, 0
     size = len(data)

@@ -9,7 +9,6 @@ from typing import (
     Generic,
     Iterable,
     TypeVar,
-    Union,
 )
 
 from bitstring import ConstBitStream
@@ -17,7 +16,13 @@ from bitstring import ConstBitStream
 from flockwave.gps.crc import crc24q
 
 from .errors import ChecksumError
-from .packets import RTCMPacket, RTCMV2Packet, RTCMV3Packet
+from .packets import (
+    RTCMPacket,
+    RTCMV2Packet,
+    RTCMV3Packet,
+    create_rtcm2_packet,
+    create_rtcm3_packet,
+)
 
 __all__ = (
     "create_rtcm_parser",
@@ -248,7 +253,7 @@ class RTCMV2Parser(RTCMParserBase[RTCMV2Packet]):
             the parsed RTCM V2 packet
         """
         bitstream = ConstBitStream(packet[1:])
-        return RTCMV2Packet.create(bitstream)
+        return create_rtcm2_packet(bitstream)
 
     def _recover_from_checksum_mismatch(
         self, packet: bytearray, parity: bytearray
@@ -365,7 +370,7 @@ class RTCMV3Parser(RTCMParserBase[RTCMV3Packet]):
             the parsed RTCM V3 packet
         """
         bitstream = ConstBitStream(packet[3:])
-        return RTCMV3Packet.create(bitstream)
+        return create_rtcm3_packet(bitstream)
 
     def _recover_from_checksum_mismatch(self, packet: bytearray, parity: bytearray):
         """Tries to recover from a checksum-mismatched packet by looking for
@@ -493,7 +498,7 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
 
 
 def create_rtcm_parser(
-    format: Union[int, str] = "auto",
+    format: int | str = "auto",
 ) -> Callable[[bytes], Iterable[RTCMPacket]]:
     """Creates an RTCM parser function that is suitable to be used in
     conjunction with the channels from the ``flockwave-conn`` module.
@@ -533,7 +538,7 @@ def main():
 
             for packet in parser(chunk):
                 if hasattr(packet, "json"):
-                    print(packet.json)  # type: ignore
+                    print(packet.json)
                 else:
                     pass
                     # print(repr(packet))

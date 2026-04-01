@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Awaitable, Callable, Iterable, Union
+from typing import Any, Awaitable, Callable, Iterable
 
 from flockwave.gps.enums import GNSSType
 from flockwave.gps.vectors import ECEFCoordinate
@@ -52,7 +52,7 @@ class RTKSurveySettings:
 
     @property
     def json(self) -> dict[str, Any]:
-        result = {
+        result: dict[str, Any] = {
             "duration": self.duration,
             "accuracy": self.accuracy,
             "messageSet": self.message_set,
@@ -81,7 +81,7 @@ class RTKSurveySettings:
         self.message_set = RTKMessageSet.MSM7
         self.gnss_types = None
 
-    def set_gnss_types(self, types: Iterable[Union[str, GNSSType]] | None) -> None:
+    def set_gnss_types(self, types: Iterable[str | GNSSType] | None) -> None:
         if types is None:
             self.gnss_types = None
         else:

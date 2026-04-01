@@ -72,7 +72,7 @@ class EphemerisData(_EphemerisData):
             if abs(E - E_old) < 1e-12:
                 break
         else:
-            log.warn(
+            log.warning(
                 "Kepler equation did not converge for satellite "
                 "{0.svid} (last difference = {1})".format(self, E - E_old)
             )

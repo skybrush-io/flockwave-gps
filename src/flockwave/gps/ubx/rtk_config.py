@@ -277,7 +277,7 @@ def test_rtk_base_configuration() -> None:
             while True:
                 data = await port.receive_some()
                 # print("raw:", hexlify(data, sep=" ").decode("ascii"))
-                for message in parser(data):
+                for message in parser(bytes(data)):
                     if hasattr(message, "packet_type"):
                         print(f"{message.packet_type}", end=" ")
                     print(message)

@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable
+from typing import Callable, Sequence
 
 from .enums import UBXClass, UBXNAVSubclass
 from .utils import calculate_ubx_checksum
@@ -69,7 +69,7 @@ class _UBXPacketFactory:
     def __init__(self):
         self._factories = {}
 
-    def __getattr__(self, name: str) -> Callable[[bytes], UBXPacket]:
+    def __getattr__(self, name: str) -> Callable[[Sequence[int]], UBXPacket]:
         func = self._factories.get(name)
         if func is None:
             try:
@@ -84,7 +84,7 @@ class _UBXPacketFactory:
         return func
 
     def _create_message(
-        self, class_id: UBXClass, subclass_id: int, data=b""
+        self, class_id: UBXClass, subclass_id: int, data: Sequence[int] = b""
     ) -> UBXPacket:
         return UBXPacket(class_id, subclass_id, bytes(data))
 
