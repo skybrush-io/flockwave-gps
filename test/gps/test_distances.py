@@ -1,9 +1,9 @@
 """Unit tests for ``flockwave.gps.distances``."""
 
+import unittest
+
 from flockwave.gps.distances import haversine
 from flockwave.gps.vectors import GPSCoordinate
-
-import unittest
 
 
 class PlanetCalcDatum(object):

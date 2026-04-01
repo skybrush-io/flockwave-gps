@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import sys
+from base64 import b64decode
 from typing import AsyncIterator
 
 import click
-import sys
-
-from base64 import b64decode
 
 
 @click.command()
@@ -59,7 +58,7 @@ def ntrip_replayer(file, port: int = 5555, stdout: bool = False):
         log("Connection closed")
 
     async def handle_tcp_socket():
-        host = "0.0.0.0"
+        host = "0.0.0.0"  # noqa: S104
         log(f"Listening on {host}:{port}...")
         await serve_tcp(handle_request, port=port, host=host)
 
@@ -80,4 +79,4 @@ def ntrip_replayer(file, port: int = 5555, stdout: bool = False):
 
 
 if __name__ == "__main__":
-    ntrip_replayer()  # type: ignore
+    ntrip_replayer()

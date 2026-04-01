@@ -1,8 +1,8 @@
 from flockwave.gps.ubx import (
-    create_ubx_encoder,
-    create_ubx_parser,
     UBX,
     UBXClass,
+    create_ubx_encoder,
+    create_ubx_parser,
 )
 
 

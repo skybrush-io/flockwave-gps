@@ -1,14 +1,12 @@
 """Ephemeris data related classes."""
 
 import logging
-
 from builtins import range
 from collections import namedtuple
 from math import atan, cos, sin, sqrt
 
 from flockwave.gps.constants import GPS_PI, WGS84
 from flockwave.gps.vectors import ECEFCoordinate
-
 
 __all__ = ("EphemerisData",)
 

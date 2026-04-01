@@ -1,5 +1,7 @@
 """Unit tests for ``flockwave.gps.vectors``."""
 
+import unittest
+
 from flockwave.gps.constants import WGS84
 from flockwave.gps.vectors import (
     ECEFCoordinate,
@@ -12,8 +14,6 @@ from flockwave.gps.vectors import (
     VelocityNED,
     VelocityXYZ,
 )
-
-import unittest
 
 
 class JSONFormatTest(unittest.TestCase):

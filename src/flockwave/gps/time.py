@@ -18,15 +18,12 @@ __all__ = (
 )
 
 
-#: Epoch of GPS time
 GPS_EPOCH = datetime(1980, 1, 6, 0, 0, 0)
+"""Epoch of GPS time"""
 
-#: Offset between the UNIX epoch and the GPS time epoch
 GPS_EPOCH_TO_UNIX_EPOCH = 315964800
+"""Offset between the UNIX epoch and the GPS time epoch"""
 
-#: Dates when leap seconds have occurred since the GPS epoch (1980-01-01)
-#: Consult https://www.timeanddate.com/time/leap-seconds-future.html to keep this
-#: up-to-date
 _LEAP_DATES = (
     (1981, 6, 30),
     (1982, 6, 30),
@@ -47,17 +44,27 @@ _LEAP_DATES = (
     (2015, 6, 30),
     (2016, 12, 31),
 )
+"""Dates when leap seconds have occurred since the GPS epoch (1980-01-01)
 
-#: Datetime objects representing the occurrences of leap seconds since the GPS epoch
+Consult https://www.timeanddate.com/time/leap-seconds-future.html to keep this
+up-to-date
+
+This list is up-to-date as of 2026-04-01. Update the date in this comment if you
+checked it again.
+"""
+
 LEAP_DATES = tuple(datetime(i[0], i[1], i[2], 23, 59, 59) for i in _LEAP_DATES)
+"""Datetime objects representing the occurrences of leap seconds since the GPS epoch."""
 
-#: Datetime objects representing the occurrences of leap seconds since the GPS epoch, as UNIX timestamps
 LEAP_UNIX_TIMESTAMPS = tuple(
     dt.replace(tzinfo=timezone.utc).timestamp() for dt in LEAP_DATES
 )
+"""Datetime objects representing the occurrences of leap seconds since the GPS epoch,
+as UNIX timestamps.
+"""
 
-#: Number of seconds in a week in GPS time
 SECONDS_IN_WEEK = 604800
+"""Number of seconds in a week in GPS time"""
 
 
 def current_gps_week() -> int:

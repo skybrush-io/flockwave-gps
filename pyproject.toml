@@ -19,9 +19,12 @@ ntrip = ["trio>=0.30.0"]
 
 [dependency-groups]
 dev = [
+  "poethepoet>=0.42.1",
   "pytest>=8.3.5",
   "pytest-cov>=6.1.1",
-  "coverage[toml]>=7.8.0"
+  "coverage[toml]>=7.8.0",
+  "ruff>=0.15.8",
+  "ty>=0.0.27",
 ]
 
 [tool.uv.build-backend]
@@ -42,10 +45,28 @@ source = ["src"]
 [tool.coverage.report]
 show_missing = true
 
+[tool.poe.tasks]
+
+format = "ruff format . --check"
+format-fix = "ruff format ."
+
+lint = "ruff check ."
+lint-fix = "ruff check . --fix"
+
+ty = "ty check src/ test/"
+
+check.sequence = ["format", "lint"]
+check.ignore_fail = "return_non_zero"
+
+test.cmd = "python -m pytest test"
+
 [tool.ruff]
-lint.ignore = ["B905", "C901", "E402", "E501"]
-lint.select = ["B", "C", "E", "F", "W"]
+lint.ignore = [
+  "C901", # Too complex
+  "S101", # Use of assert detected - we use them in unit tests and to help type inference
+]
+lint.select = ["B", "C", "E", "F", "I", "S", "W"]
 
 [build-system]
-requires = ["uv_build>=0.10,<0.11"]
+requires = ["uv_build>=0.11,<0.12"]
 build-backend = "uv_build"

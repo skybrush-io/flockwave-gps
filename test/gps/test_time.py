@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+
 from flockwave.gps.time import (
     current_gps_week,
     datetime_to_gps_time_of_week,

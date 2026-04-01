@@ -105,7 +105,8 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
                         # Static hold threshold
                         0x00,
                         0x00,
-                        # UTC standard to be used; receiver selects based on GNSS configuration
+                        # UTC standard to be used; receiver selects based on GNSS
+                        # configuration
                         0x00,
                         # Reserved
                         0x00,
@@ -207,7 +208,8 @@ class UBXRTKBaseConfigurator(RTKBaseConfigurator):
                 int(round(position_in_one_tenth_of_mm.z)),
             )
             coords, coords_hp = zip(
-                *(divmod(coord, 100) for coord in coords_in_one_tenth_of_mm)
+                *(divmod(coord, 100) for coord in coords_in_one_tenth_of_mm),
+                strict=False,
             )
             flags = 0x02  # 2 = fixed position
             fixed_accuracy = max(
@@ -258,6 +260,7 @@ def test_rtk_base_configuration() -> None:
 
     async def main() -> None:
         from flockwave.connections.serial import SerialPortStream
+
         from flockwave.gps.parser import create_gps_parser
 
         port = await SerialPortStream.create(
@@ -274,7 +277,7 @@ def test_rtk_base_configuration() -> None:
             while True:
                 data = await port.receive_some()
                 # print("raw:", hexlify(data, sep=" ").decode("ascii"))
-                for message in parser(data):  # type: ignore
+                for message in parser(data):
                     if hasattr(message, "packet_type"):
                         print(f"{message.packet_type}", end=" ")
                     print(message)

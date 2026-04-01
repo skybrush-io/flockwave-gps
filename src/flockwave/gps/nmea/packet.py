@@ -1,8 +1,7 @@
-import pynmea2
-
 from functools import lru_cache
 from typing import Any, Sequence
 
+import pynmea2
 from pynmea2 import NMEASentence as NMEAPacket
 
 __all__ = ("NMEAPacket", "create_talker_sentence", "create_nmea_packet")
