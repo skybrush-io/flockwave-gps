@@ -1,10 +1,10 @@
 """Simple HTTP request object for the low-level HTTP library."""
 
-from collections import OrderedDict
 from io import BytesIO
 from urllib.parse import quote, urlparse
 
 from .response import Response
+from .utils import CaseInsensitiveMapping
 
 __all__ = ("Request",)
 
@@ -15,7 +15,7 @@ class Request:
     data: bytes | None
     """The data to send in the body of the HTTP request."""
 
-    headers: OrderedDict[str, bytes]
+    headers: CaseInsensitiveMapping[bytes]
     """The headers to send with the HTTP request."""
 
     def __init__(
@@ -35,7 +35,7 @@ class Request:
         """
         self.url = url
         self.data = data
-        self.headers = OrderedDict()
+        self.headers = CaseInsensitiveMapping[bytes]()
         for key, value in (headers or {}).items():
             self.add_header(key, value)
 
@@ -43,10 +43,10 @@ class Request:
         """Adds an HTTP header to the request.
 
         Parameters:
-            key: the name of the header to add. It will be capitalized.
+            key: the name of the header to add
             val: the value of the header to add
         """
-        self.headers[key.capitalize()] = val
+        self.headers[key] = val
 
     def has_header(self, key: str) -> bool:
         """Checks whether the request contains the given HTTP header.
@@ -54,7 +54,7 @@ class Request:
         Parameters:
             key: the name of the header to check. It will be capitalized.
         """
-        return key.capitalize() in self.headers
+        return key in self.headers
 
     async def send(self, timeout: float = 10) -> Response:
         """Sends the HTTP request and returns a Response_ object.
