@@ -1,12 +1,13 @@
 from datetime import datetime
 
+from pytest import mark
+
 from flockwave.gps.formatting import (
     format_gps_coordinate_as_nmea_gga_message,
     format_latitude_for_nmea_gga_message,
     format_longitude_for_nmea_gga_message,
 )
 from flockwave.gps.vectors import GPSCoordinate
-from pytest import mark
 
 
 @mark.parametrize(
