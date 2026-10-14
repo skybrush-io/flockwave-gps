@@ -65,7 +65,7 @@ class RTCMV2Encoder:
         try:
             message.write_body(bits)
         except (NotImplementedError, AttributeError):
-            if hasattr(message, "bytes"):
+            if message.bytes is not None:
                 bits = BitArray(bytes=message.bytes)
             else:
                 raise NotImplementedError(
@@ -224,7 +224,7 @@ class RTCMV3Encoder:
         try:
             message.write_body(bits)  # type: ignore
         except (NotImplementedError, AttributeError):
-            if hasattr(message, "bytes"):
+            if message.bytes is not None:
                 bits = BitArray(bytes=message.bytes)
             else:
                 raise NotImplementedError(

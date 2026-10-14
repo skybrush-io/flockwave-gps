@@ -17,7 +17,8 @@ class CorrectionData(
 
     def __init__(self, *args, **kwds):
         """Constructor."""
-        super().__init__(*args, **kwds)
+        # The fields are set by __new__() of the named tuple
+        super().__init__()
         self._scale_factor = None
         self._scaled_prc = None
         self._scaled_prrc = None

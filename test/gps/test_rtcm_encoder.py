@@ -30,8 +30,8 @@ from .test_rtcm_parser import (
 
 
 def correction(svid, scale_factor, scaled_prc, scaled_prrc, iode):
-    """Stand-in for CorrectionData_ objects, which currently cannot be
-    constructed due to a bug in its constructor.
+    """Stand-in for CorrectionData_ objects that lets the tests specify the
+    scaled values directly, including invalid ones.
     """
     return SimpleNamespace(
         svid=svid,
@@ -208,6 +208,30 @@ def test_rtcm2_encoder_uses_modified_z_count_of_message():
         RTCMV2Encoder().encode(message)
 
 
+def test_rtcm2_encoder_unsupported_packet():
+    with pytest.raises(NotImplementedError, match="Unsupported RTCM v2"):
+        RTCMV2Encoder().encode(RTCMV2Packet(packet_type=31, station_id=1))
+
+
+def test_rtcm2_encoder_full_corrections_roundtrip():
+    packet = RTCMV2FullCorrectionsPacket(
+        station_id=123,
+        corrections=[
+            CorrectionData(svid=5, prc=-1234, prrc=12, iode=77),
+            CorrectionData(svid=17, prc=40000, prrc=-304, iode=3),
+        ],
+    )
+    data = RTCMV2Encoder().encode(packet, time_of_week=18123)
+
+    # Must be identical to the output produced from the stand-in objects
+    assert data == RTCMV2Encoder().encode(full_corrections_packet(), time_of_week=18123)
+
+    (parsed,) = list(RTCMV2Parser().feed(data))
+    assert isinstance(parsed, RTCMV2FullCorrectionsPacket)
+    assert parsed.station_id == 123
+    assert parsed.corrections == packet.corrections
+
+
 ###########################################################################
 # RTCM v3 encoder tests
 
@@ -238,6 +262,11 @@ def test_rtcm3_encoder_raw_packet():
     (parsed,) = list(RTCMV3Parser().feed(encoded))
     assert parsed.packet_type == 1234
     assert parsed.bytes == payload
+
+
+def test_rtcm3_encoder_unsupported_packet():
+    with pytest.raises(NotImplementedError, match="Unsupported RTCM v3"):
+        RTCMV3Encoder().encode(RTCMV3Packet(packet_type=1005))
 
 
 @pytest.mark.parametrize(
@@ -272,12 +301,6 @@ def test_get_best_satellites():
     assert [s.svid for s in get_best_satellites(sats, 2)] == [1, 0]
 
 
-@pytest.mark.xfail(
-    reason="CorrectionData() cannot be constructed; its __init__ passes "
-    "arguments to object.__init__()",
-    raises=TypeError,
-    strict=True,
-)
 def test_correction_data_scale_factor():
     small = CorrectionData(svid=1, prc=-1234, prrc=12, iode=0)
     assert (small.scale_factor, small.scaled_prc, small.scaled_prrc) == (0, -1234, 12)

@@ -484,6 +484,9 @@ def test_rtcm3_glonass_rtk(packet_type: int):
     else:
         assert sat.l2 is None
 
+    assert repr(sat).startswith("<RTCMV3GLONASSSatelliteInfo(svid=24, ")
+    assert repr(packet).startswith("<RTCMV3GLONASSRTKPacket(station_id=77, ")
+
     json = packet.json
     assert json["tod"] == packet.tod
     assert json["satellites"][0]["svid"] == 24
@@ -686,12 +689,6 @@ def test_rtcm2_parser_resets_on_invalid_byte():
     assert len(packets) == 1
 
 
-@pytest.mark.xfail(
-    reason="CorrectionData() cannot be constructed; its __init__ passes "
-    "arguments to object.__init__()",
-    raises=TypeError,
-    strict=True,
-)
 def test_rtcm2_parser_full_corrections():
     payload = (
         BitWriter()
