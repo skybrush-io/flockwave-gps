@@ -75,14 +75,14 @@ def build_gps_rtk_payload(packet_type: int) -> bytes:
     sats = [
         # svid, code, pr, prdiff, lock, amb, cnr, l2code, l2pr, l2prdiff, l2lock, l2cnr
         (5, 1, 1000000, -1234, 63, 12, 180, 1, -500, 4321, 60, 160),
-        (31, 0, 7654321, 222222, 3, 0, 4, 3, 8191, -222222, 0, 255),
+        (31, 0, 7654321, 222222, 100, 0, 4, 3, 8191, -222222, 127, 255),
     ]
     for svid, code, pr, prd, lock, amb, cnr, l2c, l2pr, l2prd, l2lock, l2cnr in sats:
-        w.uint(6, svid).uint(1, code).uint(24, pr).int(20, prd).int(7, lock)
+        w.uint(6, svid).uint(1, code).uint(24, pr).int(20, prd).uint(7, lock)
         if is_extended:
             w.uint(8, amb).uint(8, cnr)
         if has_l2:
-            w.uint(2, l2c).int(14, l2pr).int(20, l2prd).int(7, l2lock)
+            w.uint(2, l2c).int(14, l2pr).int(20, l2prd).uint(7, l2lock)
             if is_extended:
                 w.uint(8, l2cnr)
 
@@ -90,18 +90,42 @@ def build_gps_rtk_payload(packet_type: int) -> bytes:
 
 
 def build_glonass_rtk_payload(packet_type: int) -> bytes:
-    has_l2 = packet_type == 1012
+    has_l2 = packet_type in (1011, 1012)
     is_extended = packet_type in (1010, 1012)
 
     w = BitWriter()
     w.uint(12, packet_type).uint(12, 77)
-    w.uint(27, 12345678).bool(False).uint(5, 1).bool(False).uint(3, 0)
+    w.uint(27, 12345678).bool(False).uint(5, 2).bool(False).uint(3, 0)
 
-    w.uint(6, 24).uint(1, 1).uint(5, 13).uint(25, 20000000).int(20, -5000).int(7, 42)
-    if is_extended or has_l2:
-        w.uint(7, 99).uint(8, 160)
-    if has_l2:
-        w.uint(2, 2).uint(14, 1500).int(20, 6000).int(7, 17).uint(8, 140)
+    sats = [
+        # svid, code, freq, pr, prdiff, lock, amb, cnr, l2code, l2pr, l2prdiff,
+        # l2lock, l2cnr
+        (24, 1, 13, 20000000, -5000, 42, 99, 160, 2, 1500, 6000, 17, 140),
+        (1, 0, 0, 33554431, 1, 100, 0, 255, 1, -250, -1, 127, 0),
+    ]
+    for (
+        svid,
+        code,
+        freq,
+        pr,
+        prd,
+        lock,
+        amb,
+        cnr,
+        l2c,
+        l2pr,
+        l2prd,
+        l2lock,
+        l2cnr,
+    ) in sats:
+        w.uint(6, svid).uint(1, code).uint(5, freq).uint(25, pr).int(20, prd)
+        w.uint(7, lock)
+        if is_extended:
+            w.uint(7, amb).uint(8, cnr)
+        if has_l2:
+            w.uint(2, l2c).int(14, l2pr).int(20, l2prd).uint(7, l2lock)
+            if is_extended:
+                w.uint(8, l2cnr)
 
     return w.to_bytes()
 
@@ -382,7 +406,7 @@ def test_rtcm3_gps_rtk(packet_type: int):
     assert second.l1["type"] == "1C"
     assert second.l1["pseudorange"] == pytest.approx(153086.42)
     assert second.l1["pseudorange_diff"] == pytest.approx(111.111)
-    assert second.l1["lock_time"] == 3
+    assert second.l1["lock_time"] == 100
 
     if is_extended:
         assert first.l1["ambiguity"] == 12
@@ -404,6 +428,7 @@ def test_rtcm3_gps_rtk(packet_type: int):
         assert second.l2["type"] == "2W"
         assert second.l2["pseudorange"] == pytest.approx(163.82)
         assert second.l2["pseudorange_diff"] == pytest.approx(-111.111)
+        assert second.l2["lock_time"] == 127
         if is_extended:
             assert first.l2["cnr"] == pytest.approx(40.0)
             assert second.l2["cnr"] == pytest.approx(63.75)
@@ -429,19 +454,58 @@ def test_rtcm3_gps_rtk(packet_type: int):
     assert [sat["svid"] for sat in json["satellites"]] == [5, 31]
 
 
-def test_rtcm3_gps_rtk_invalid_pseudorange():
+def test_rtcm3_gps_rtk_invalid_markers():
     w = BitWriter()
-    w.uint(12, 1001).uint(12, 1).uint(30, 0).bool(False).uint(5, 1)
+    w.uint(12, 1004).uint(12, 1).uint(30, 0).bool(False).uint(5, 2)
     w.bool(False).uint(3, 0)
-    w.uint(6, 1).uint(1, 0).uint(24, 0x80000).int(20, 0).int(7, 0)
+    # First satellite: L1 phaserange-pseudorange invalid
+    w.uint(6, 1).uint(1, 0).uint(24, 1000).int(20, -0x80000).uint(7, 0)
+    w.uint(8, 0).uint(8, 0)
+    w.uint(2, 0).int(14, 10).int(20, 0).uint(7, 0).uint(8, 0)
+    # Second satellite: L2-L1 pseudorange difference and L2
+    # phaserange-pseudorange invalid
+    w.uint(6, 2).uint(1, 0).uint(24, 1000).int(20, 0).uint(7, 0)
+    w.uint(8, 0).uint(8, 0)
+    w.uint(2, 0).int(14, -0x2000).int(20, -0x80000).uint(7, 0).uint(8, 0)
 
     (packet,) = parse(RTCMV3Parser(), frame_rtcm3(w.to_bytes()))
-    assert packet.satellites[0].l1["pseudorange"] == 0.0
+    first, second = packet.satellites
+
+    assert first.l1["pseudorange_diff"] == 0.0
+    assert first.l1["pseudorange_valid"] is False
+    assert first.l2["pseudorange"] == pytest.approx(0.2)
+    assert first.l2["pseudorange_valid"] is True
+    assert first.temp_corrs == {"p1": 0.0, "p2": 0.0}
+
+    assert second.l1["pseudorange_valid"] is True
+    assert second.l2["pseudorange"] == 0.0
+    assert second.l2["pseudorange_diff"] == 0.0
+    assert second.l2["pseudorange_valid"] is False
+    assert second.temp_corrs == {"p1": 0.0, "p2": 0.0}
 
 
-@pytest.mark.parametrize("packet_type", [1009, 1010, 1012])
+def test_rtcm3_glonass_rtk_invalid_markers():
+    w = BitWriter()
+    w.uint(12, 1012).uint(12, 1).uint(27, 0).bool(False).uint(5, 1)
+    w.bool(False).uint(3, 0)
+    w.uint(6, 1).uint(1, 0).uint(5, 7).uint(25, 1000).int(20, -0x80000).uint(7, 0)
+    w.uint(7, 0).uint(8, 0)
+    w.uint(2, 0).int(14, -0x2000).int(20, -0x80000).uint(7, 0).uint(8, 0)
+
+    (packet,) = parse(RTCMV3Parser(), frame_rtcm3(w.to_bytes()))
+    (sat,) = packet.satellites
+
+    assert sat.l1["pseudorange"] == pytest.approx(20.0)
+    assert sat.l1["pseudorange_diff"] == 0.0
+    assert sat.l1["pseudorange_valid"] is False
+    assert sat.l2["pseudorange"] == 0.0
+    assert sat.l2["pseudorange_diff"] == 0.0
+    assert sat.l2["pseudorange_valid"] is False
+
+
+@pytest.mark.parametrize("packet_type", [1009, 1010, 1011, 1012])
 def test_rtcm3_glonass_rtk(packet_type: int):
-    has_l2 = packet_type == 1012
+    has_l2 = packet_type in (1011, 1012)
     is_extended = packet_type in (1010, 1012)
 
     payload = build_glonass_rtk_payload(packet_type)
@@ -455,9 +519,9 @@ def test_rtcm3_glonass_rtk(packet_type: int):
     assert packet.sync is False
     assert packet.smoothed is False
     assert packet.smoothing_interval == 0
-    assert packet.num_satellites == 1
+    assert packet.num_satellites == 2
 
-    (sat,) = packet.satellites
+    sat, other = packet.satellites
     assert (sat.svid, sat.id) == (24, "R24")
     assert sat.l1["code"] == 1
     assert sat.l1["type"] == "1W"
@@ -479,17 +543,42 @@ def test_rtcm3_glonass_rtk(packet_type: int):
         assert sat.l2["pseudorange"] == pytest.approx(30.0)
         assert sat.l2["pseudorange_diff"] == pytest.approx(3.0)
         assert sat.l2["lock_time"] == 17
-        assert sat.l2["cnr"] == pytest.approx(35.0)
-        assert sat.cnr == (pytest.approx(40.0), pytest.approx(35.0))
+        if is_extended:
+            assert sat.l2["cnr"] == pytest.approx(35.0)
+            assert sat.cnr == (pytest.approx(40.0), pytest.approx(35.0))
+        else:
+            assert "ambiguity" not in sat.l1
+            assert "cnr" not in sat.l1
+            assert "ambiguity" not in sat.l2
+            assert "cnr" not in sat.l2
     else:
         assert sat.l2 is None
+
+    # The second satellite catches misaligned fields in the first one
+    assert (other.svid, other.id) == (1, "R01")
+    assert other.l1["code"] == 0
+    assert other.l1["freq"] == 0
+    assert other.l1["pseudorange"] == pytest.approx(671088.62)
+    assert other.l1["pseudorange_diff"] == pytest.approx(0.0005)
+    assert other.l1["lock_time"] == 100
+    if is_extended:
+        assert other.l1["ambiguity"] == 0
+        assert other.l1["cnr"] == pytest.approx(63.75)
+    if has_l2:
+        assert other.l2 is not None
+        assert other.l2["type"] == "2P"
+        assert other.l2["pseudorange"] == pytest.approx(-5.0)
+        assert other.l2["pseudorange_diff"] == pytest.approx(-0.0005)
+        assert other.l2["lock_time"] == 127
+        if is_extended:
+            assert other.l2["cnr"] == 0.0
 
     assert repr(sat).startswith("<RTCMV3GLONASSSatelliteInfo(svid=24, ")
     assert repr(packet).startswith("<RTCMV3GLONASSRTKPacket(station_id=77, ")
 
     json = packet.json
     assert json["tod"] == packet.tod
-    assert json["satellites"][0]["svid"] == 24
+    assert [s["svid"] for s in json["satellites"]] == [24, 1]
 
 
 def test_rtcm3_gps_ephemeris():

@@ -32,8 +32,9 @@ class RTCMParams:
     CARRIER_NOISE_RATIO_HIRES_UNITS = 0.0625
     PSEUDORANGE_RESOLUTION = 2e-2
     PSEUDORANGE_DIFF_RESOLUTION = 5e-4
-    INVALID_PSEUDORANGE_MARKER = 0x80000
-    GLONASS_INVALID_RANGEINCR_MARKER = 0x2000
+    # 0x80000 and 0x2000, interpreted as signed 20-bit and 14-bit integers
+    INVALID_PSEUDORANGE_DIFF_MARKER = -0x80000
+    INVALID_RANGEINCR_MARKER = -0x2000
     PSEUDORANGE_UNIT_GPS = 299792.458  # speed of light, km/s
     PSEUDORANGE_UNIT_GLONASS = 599584.916
     RANGE_UNIT_MSM = 299792.458  # speed of light, km/s
@@ -345,7 +346,7 @@ class RTCMV3GPSSatelliteInfo:
             result.l1["pseudorange_diff"],
             result.l1["pseudorange_valid"],
         ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
-        result.l1["lock_time"] = bitstream.read(7).int
+        result.l1["lock_time"] = bitstream.read(7).uint
         if is_extended:
             result.l1["ambiguity"] = bitstream.read(8).uint
             result.l1["cnr"] = (
@@ -357,22 +358,13 @@ class RTCMV3GPSSatelliteInfo:
             result.l2 = {}
             result.l2["code"] = bitstream.read(2).uint
             result.l2["type"] = ["2X", "2P", "2W", "2W"][result.l2["code"]]
-            # TODO: gpsd source code parses this field as an uint.
-            # (https://git.recluse.de/raw/mirror/gpsd.git/master/driver_rtcm3.c)
-            # OTOH, ntrip source code parses this field as an int.
-            # (see https://software.rtcm-ntrip.org/browser/ntrip/trunk/...
-            # ...BNC/src/RTCM3/RTCM3Decoder.cpp)
-            # pyUblox also parses this field as an int. int makes more sense
-            # as we add this to the other pseudorange in the end.
-            # Check and verify.
-            result.l2["pseudorange"] = cls._transform_pseudorange(
-                bitstream.read(14).int
-            )
+            # L2-L1 pseudorange difference, signed
+            result.l2["pseudorange"] = cls._transform_rangeincr(bitstream.read(14).int)
             (
                 result.l2["pseudorange_diff"],
                 result.l2["pseudorange_valid"],
             ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
-            result.l2["lock_time"] = bitstream.read(7).int
+            result.l2["lock_time"] = bitstream.read(7).uint
             if is_extended:
                 result.l2["cnr"] = (
                     bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
@@ -426,14 +418,18 @@ class RTCMV3GPSSatelliteInfo:
 
     @staticmethod
     def _transform_pseudorange(value):
-        if value == RTCMParams.INVALID_PSEUDORANGE_MARKER:
+        return value * RTCMParams.PSEUDORANGE_RESOLUTION
+
+    @staticmethod
+    def _transform_rangeincr(value):
+        if value == RTCMParams.INVALID_RANGEINCR_MARKER:
             return 0.0
         else:
             return value * RTCMParams.PSEUDORANGE_RESOLUTION
 
     @staticmethod
     def _transform_pseudorange_diff(value):
-        if value == RTCMParams.INVALID_PSEUDORANGE_MARKER:
+        if value == RTCMParams.INVALID_PSEUDORANGE_DIFF_MARKER:
             return 0.0, False
         else:
             return value * RTCMParams.PSEUDORANGE_DIFF_RESOLUTION, True
@@ -477,34 +473,30 @@ class RTCMV3GLONASSSatelliteInfo:
             result.l1["pseudorange_diff"],
             result.l1["pseudorange_valid"],
         ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
-        result.l1["lock_time"] = bitstream.read(7).int
-        if is_extended or has_l2:
-            # According to the gpsd source, GLONASS L1&L2 basic packets
-            # have ambiguity and CNR info for L1
+        result.l1["lock_time"] = bitstream.read(7).uint
+        if is_extended:
             result.l1["ambiguity"] = bitstream.read(7).uint
             result.l1["cnr"] = (
                 bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
             )
 
-        # Now the L2 signal
+        # Now the L2 signal. Its frequency channel is not transmitted
+        # separately in either 1011 or 1012 packets
         if has_l2:
             result.l2 = {}
-            result.l2["code"] = bitstream.read(2 if is_extended else 1).uint
-            if is_extended:
-                result.l2["freq"] = 0
-            else:
-                result.l2["freq"] = bitstream.read(5).uint
-            result.l2["pseudorange"] = cls._transform_rangeincr(bitstream.read(14).uint)
+            result.l2["code"] = bitstream.read(2).uint
+            result.l2["freq"] = 0
+            # L2-L1 pseudorange difference, signed
+            result.l2["pseudorange"] = cls._transform_rangeincr(bitstream.read(14).int)
             (
                 result.l2["pseudorange_diff"],
                 result.l2["pseudorange_valid"],
             ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
-            result.l2["lock_time"] = bitstream.read(7).int
-            if not is_extended:
-                result.l2["ambiguity"] = bitstream.read(7).uint
-            result.l2["cnr"] = (
-                bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
-            )
+            result.l2["lock_time"] = bitstream.read(7).uint
+            if is_extended:
+                result.l2["cnr"] = (
+                    bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
+                )
         else:
             result.l2 = None
 
@@ -535,21 +527,18 @@ class RTCMV3GLONASSSatelliteInfo:
 
     @staticmethod
     def _transform_pseudorange(value):
-        if value == RTCMParams.INVALID_PSEUDORANGE_MARKER:
-            return 0.0
-        else:
-            return value * RTCMParams.PSEUDORANGE_RESOLUTION
+        return value * RTCMParams.PSEUDORANGE_RESOLUTION
 
     @staticmethod
     def _transform_rangeincr(value):
-        if value == RTCMParams.GLONASS_INVALID_RANGEINCR_MARKER:
+        if value == RTCMParams.INVALID_RANGEINCR_MARKER:
             return 0.0
         else:
             return value * RTCMParams.PSEUDORANGE_RESOLUTION
 
     @staticmethod
     def _transform_pseudorange_diff(value):
-        if value == RTCMParams.INVALID_PSEUDORANGE_MARKER:
+        if value == RTCMParams.INVALID_PSEUDORANGE_DIFF_MARKER:
             return 0.0, False
         else:
             return value * RTCMParams.PSEUDORANGE_DIFF_RESOLUTION, True
