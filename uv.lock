@@ -411,7 +411,7 @@ serial = [
 
 [[package]]
 name = "flockwave-gps"
-version = "5.0.1"
+version = "5.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "bitstring" },
