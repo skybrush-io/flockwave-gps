@@ -75,9 +75,9 @@ def create_gps_parser(
         successful_parsers = []
         for ch in chars:
             for parser in parsers:
-                messages = parser.feed(ch)
-                result.extend(messages)
-                if messages:
+                num_results = len(result)
+                result.extend(parser.feed(ch))
+                if len(result) > num_results:
                     successful_parsers.append(parser)
 
             if successful_parsers:

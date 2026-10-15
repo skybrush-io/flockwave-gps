@@ -256,7 +256,7 @@ class PositionXYZ(Vector3D):
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
     @Vector3D.json.getter
-    def json(self) -> list[int]:
+    def json(self) -> list[float]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -279,7 +279,7 @@ class VelocityXYZ(Vector3D):
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
     @Vector3D.json.getter
-    def json(self) -> list[int]:
+    def json(self) -> list[float]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -337,7 +337,7 @@ class VelocityNED(Vector3D):
         super().update(north, east, down, precision=precision)
 
     @Vector3D.json.getter
-    def json(self) -> list[int]:
+    def json(self) -> list[float]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),
@@ -395,7 +395,7 @@ class ECEFCoordinate(Vector3D):
         return cls(x=data[0] * 1e-3, y=data[1] * 1e-3, z=data[2] * 1e-3)
 
     @property
-    def json(self) -> list[int]:
+    def json(self) -> list[float]:
         """Returns the JSON representation of the coordinate."""
         return [
             int(round(self._x * 1e3)),

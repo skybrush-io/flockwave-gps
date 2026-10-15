@@ -11,7 +11,7 @@ from flockwave.gps.vectors import ECEFCoordinate
 __all__ = ("EphemerisData",)
 
 _EphemerisData = namedtuple(
-    "EphemerisData",
+    "EphemerisData",  # ty:ignore[mismatched-type-name]
     "week iodc iode tow toc toe tgd af2 af1 af0 crs "
     "delta_n m0 cuc eccentricity cus sqrt_a cic "
     "omega0 cis i0 crc omega omega_dot i_dot flags "

@@ -8,6 +8,7 @@ from typing import (
     Callable,
     Generic,
     Iterable,
+    Sequence,
     TypeVar,
 )
 
@@ -482,7 +483,7 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
 
     def _process_pending_checksum_errors(
         self,
-    ) -> tuple[Iterable[RTCMPacket], RTCMParserBase | None]:
+    ) -> tuple[Sequence[RTCMPacket], RTCMParserBase | None]:
         """Processes unprocessed checksum errors from subparsers to see
         if any of the recovery attempts yield proper packets. Returns a
         list of the recovered packets, or an empty list if there was
