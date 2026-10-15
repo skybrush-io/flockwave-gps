@@ -3,7 +3,7 @@
 from itertools import cycle
 from typing import Callable
 
-from bitstring import BitArray, pack
+from bitstring import BitArray, Bits, pack
 
 from flockwave.gps.crc import crc24q
 
@@ -66,7 +66,7 @@ class RTCMV2Encoder:
             message.write_body(bits)
         except (NotImplementedError, AttributeError):
             if message.bytes is not None:
-                bits = BitArray(bytes=message.bytes)
+                bits = BitArray.from_bytes(message.bytes)
             else:
                 raise NotImplementedError(
                     "Unsupported RTCM v2 packet type: {0!r}".format(message.packet_type)
@@ -76,7 +76,7 @@ class RTCMV2Encoder:
         if add_parities:
             bits = self._encode_message(bits)
 
-        return bits.tobytes()
+        return bits.to_bytes()
 
     def _calculate_modified_z_count(self, time_of_week: int):
         """Returns the current "modified Z count" value that is to be inserted
@@ -120,8 +120,8 @@ class RTCMV2Encoder:
         for start in range(0, len(bits), 24):
             word = self._encode_word(bits[start : (start + 24)])
             for chunk_start in range(0, len(word), 6):
-                result.append((False, True))
-                result.append(reversed(word[chunk_start : (chunk_start + 6)]))
+                result.append("0b01")
+                result.append(word[chunk_start : (chunk_start + 6)][::-1])
         return result
 
     def _encode_word(self, bits):
@@ -136,7 +136,7 @@ class RTCMV2Encoder:
         """
         assert len(bits) == 24
         parities = []
-        word = bits.uintbe
+        word = bits.u
         for previous_parity_index, mask in self._PARITY_FORMULA:
             num_set_bits = (
                 count_bits(word & mask) + self.previous_parities[previous_parity_index]
@@ -144,7 +144,7 @@ class RTCMV2Encoder:
             parities.append(num_set_bits & 1)
         if self.previous_parities[1]:
             bits.invert()
-        bits.append(parities)
+        bits.append(Bits.from_bools(parities))
         self.previous_parities = list(bits[-2:])
         return bits
 
@@ -182,7 +182,7 @@ class RTCMV2Encoder:
         health = 0  # assume UDRE scale factor = 1.0
 
         header = pack(
-            "uint:8, uint:6, uint:10, uint:13, uint:3, uint:5, uint:3",
+            "u8, u6, u10, u13, u3, u5, u3",
             self.PREAMBLE,
             message.packet_type,
             message.station_id,
@@ -191,7 +191,7 @@ class RTCMV2Encoder:
             num_data_words,
             health,
         )
-        bits[0:0] = header
+        bits.prepend(header)
         while len(bits) % 24 != 0:
             bits.append("0b10101010")
 
@@ -225,13 +225,13 @@ class RTCMV3Encoder:
             message.write_body(bits)  # type: ignore
         except (NotImplementedError, AttributeError):
             if message.bytes is not None:
-                bits = BitArray(bytes=message.bytes)
+                bits = BitArray.from_bytes(message.bytes)
             else:
                 raise NotImplementedError(
                     f"Unsupported RTCM v3 packet type: {message.packet_type!r}"
                 ) from None
 
-        data = bits.tobytes()
+        data = bits.to_bytes()
 
         if add_parities:
             length = len(data)

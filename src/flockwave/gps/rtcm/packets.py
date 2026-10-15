@@ -12,14 +12,14 @@ from typing import (
     Union,
 )
 
-from bitstring import BitArray, BitStream, ConstBitStream, pack
+from bitstring import BitArray, Reader, pack
 
 from flockwave.gps.constants import GPS_PI, SPEED_OF_LIGHT_KM_S
 from flockwave.gps.vectors import ECEFCoordinate
 
 from .correction import CorrectionData
 from .ephemeris import EphemerisData
-from .utils import get_best_satellites
+from .utils import get_best_satellites, read_bool, read_int, read_uint
 
 
 class RTCMParams:
@@ -98,7 +98,7 @@ class RTCMV2Packet:
 class RTCMV2PacketFactory(Protocol):
     @classmethod
     def create(
-        cls, packet_type: int, station_id: int, bitstream: ConstBitStream
+        cls, packet_type: int, station_id: int, bitstream: Reader
     ) -> RTCMV2Packet: ...
 
 
@@ -109,14 +109,14 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
     corrections: Sequence[CorrectionData]
 
     @classmethod
-    def create(cls, packet_type: int, station_id: int, bitstream: ConstBitStream):
+    def create(cls, packet_type: int, station_id: int, bitstream: Reader):
         """Creates an RTCM V2 full corrections packet from a bit stream that
         is supposed to be positioned after the header of the RTCM V2
         message.
         """
         assert packet_type == 1
 
-        num_bits = len(bitstream) - bitstream.pos
+        num_bits = bitstream.remaining
         num_corrections, remainder = divmod(num_bits, 40)
         if remainder % 8 != 0:
             raise ValueError(
@@ -127,20 +127,20 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
 
         corrections = []
         for _i in range(num_corrections):
-            scale_factor = bitstream.read(1).uint
-            bitstream.read(2)
-            svid = bitstream.read(5).uint
-            scaled_prc = bitstream.read(16).intbe
-            scaled_prrc = bitstream.read(8).int
-            iode = bitstream.read(8).uint
+            scale_factor = read_uint(bitstream, 1)
+            bitstream.read_bits(2)
+            svid = read_uint(bitstream, 5)
+            scaled_prc = read_int(bitstream, 16)
+            scaled_prrc = read_int(bitstream, 8)
+            iode = read_uint(bitstream, 8)
             multiplier = 16**scale_factor
             prc = scaled_prc * multiplier
             prrc = scaled_prrc * multiplier
             correction = CorrectionData(svid=svid, prc=prc, prrc=prrc, iode=iode)
             corrections.append(correction)
 
-        while bitstream.pos < bitstream.len:
-            fill_byte = bitstream.read(8).uint
+        while bitstream.remaining > 0:
+            fill_byte = read_uint(bitstream, 8)
             if fill_byte != 0xAA:
                 raise ValueError(
                     "invalid padding at the end of the full corrections "
@@ -197,14 +197,16 @@ class RTCMV2FullCorrectionsPacket(RTCMV2Packet):
                         correction.svid
                     )
                 )
+            # bitstring does not accept floats for integer fields; int()
+            # truncates towards zero
             bits += pack(
-                "uint:1, uint:2, uint:5, intbe:16, int:8, uint:8",
-                correction.scale_factor,
+                "u1, u2, u5, i16, i8, u8",
+                int(correction.scale_factor),
                 0,
-                correction.svid & 0x1F,
-                correction.scaled_prc,
-                correction.scaled_prrc,
-                correction.iode,
+                int(correction.svid) & 0x1F,
+                int(correction.scaled_prc),
+                int(correction.scaled_prrc),
+                int(correction.iode),
             )
 
 
@@ -221,7 +223,7 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
     position: ECEFCoordinate | None
 
     @classmethod
-    def create(cls, packet_type: int, station_id: int, bitstream: ConstBitStream):
+    def create(cls, packet_type: int, station_id: int, bitstream: Reader):
         """Creates an RTCM V2 GPS reference station parameters packet
         from a bit stream that is supposed to be positioned after the
         header of the RTCM V2 message.
@@ -230,9 +232,9 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
 
         pos = (
             ECEFCoordinate(
-                x=bitstream.read(32).intbe,
-                y=bitstream.read(32).intbe,
-                z=bitstream.read(32).intbe,
+                x=read_int(bitstream, 32),
+                y=read_int(bitstream, 32),
+                z=read_int(bitstream, 32),
             )
             / 100  # [cm] -> [m]
         )
@@ -267,8 +269,9 @@ class RTCMV2GPSReferenceStationParametersPacket(RTCMV2Packet):
         """
         assert self.position is not None
         pos = self.position * 100  # [m] -> [cm]
-        # uints must be encoded as big-endian
-        bits += pack("intbe:32, intbe:32, intbe:32", pos.x, pos.y, pos.z)
+        # bitstring does not accept floats for integer fields; int() truncates
+        # towards zero
+        bits += pack("i32, i32, i32", int(pos.x), int(pos.y), int(pos.z))
 
 
 class RTCMV3Packet:
@@ -311,7 +314,7 @@ class RTCMV3Packet:
 
 class RTCMV3PacketFactory(Protocol):
     @classmethod
-    def create(cls, packet_type: int, bitstream: ConstBitStream) -> RTCMV3Packet: ...
+    def create(cls, packet_type: int, bitstream: Reader) -> RTCMV3Packet: ...
 
 
 class RTCMV3SatelliteInfo(Protocol):
@@ -329,45 +332,45 @@ class RTCMV3GPSSatelliteInfo:
     temp_corrs: dict[str, Any]
 
     @classmethod
-    def create(cls, bitstream: ConstBitStream, is_extended: bool, has_l2: bool):
+    def create(cls, bitstream: Reader, is_extended: bool, has_l2: bool):
         """Creates a satellite info object from a bit stream that is supposed
         to be part of the body of an RTCMV3GPSRTKPacket_ packet (basic or
         extended).
         """
         result = cls()
-        result.svid = bitstream.read(6).uint
+        result.svid = read_uint(bitstream, 6)
         result.id = "G{0:02}".format(result.svid)
 
         # Store the raw parameters of the L1 signal first
         result.l1 = {}
-        result.l1["code"] = bitstream.read(1).uint
-        result.l1["pseudorange"] = cls._transform_pseudorange(bitstream.read(24).uint)
+        result.l1["code"] = read_uint(bitstream, 1)
+        result.l1["pseudorange"] = cls._transform_pseudorange(read_uint(bitstream, 24))
         (
             result.l1["pseudorange_diff"],
             result.l1["pseudorange_valid"],
-        ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
-        result.l1["lock_time"] = bitstream.read(7).uint
+        ) = cls._transform_pseudorange_diff(read_int(bitstream, 20))
+        result.l1["lock_time"] = read_uint(bitstream, 7)
         if is_extended:
-            result.l1["ambiguity"] = bitstream.read(8).uint
+            result.l1["ambiguity"] = read_uint(bitstream, 8)
             result.l1["cnr"] = (
-                bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
+                read_uint(bitstream, 8) * RTCMParams.CARRIER_NOISE_RATIO_UNITS
             )
 
         # Now the L2 signal
         if has_l2:
             result.l2 = {}
-            result.l2["code"] = bitstream.read(2).uint
+            result.l2["code"] = read_uint(bitstream, 2)
             result.l2["type"] = ["2X", "2P", "2W", "2W"][result.l2["code"]]
             # L2-L1 pseudorange difference, signed
-            result.l2["pseudorange"] = cls._transform_rangeincr(bitstream.read(14).int)
+            result.l2["pseudorange"] = cls._transform_rangeincr(read_int(bitstream, 14))
             (
                 result.l2["pseudorange_diff"],
                 result.l2["pseudorange_valid"],
-            ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
-            result.l2["lock_time"] = bitstream.read(7).uint
+            ) = cls._transform_pseudorange_diff(read_int(bitstream, 20))
+            result.l2["lock_time"] = read_uint(bitstream, 7)
             if is_extended:
                 result.l2["cnr"] = (
-                    bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
+                    read_uint(bitstream, 8) * RTCMParams.CARRIER_NOISE_RATIO_UNITS
                 )
         else:
             result.l2 = None
@@ -454,48 +457,48 @@ class RTCMV3GLONASSSatelliteInfo:
     temp_corrs: dict[str, Any]
 
     @classmethod
-    def create(cls, bitstream: ConstBitStream, is_extended: bool, has_l2: bool):
+    def create(cls, bitstream: Reader, is_extended: bool, has_l2: bool):
         """Creates a satellite info object from a bit stream that is supposed
         to be part of the body of an RTCMV3GLONASSRTKPacket_ packet (basic or
         extended).
         """
         result = cls()
 
-        result.svid = bitstream.read(6).uint
+        result.svid = read_uint(bitstream, 6)
         result.id = "R{0:02}".format(result.svid)
 
         # Store the raw parameters of the L1 signal first
         result.l1 = {}
-        result.l1["code"] = bitstream.read(1).uint
-        result.l1["freq"] = bitstream.read(5).uint
-        result.l1["pseudorange"] = cls._transform_pseudorange(bitstream.read(25).uint)
+        result.l1["code"] = read_uint(bitstream, 1)
+        result.l1["freq"] = read_uint(bitstream, 5)
+        result.l1["pseudorange"] = cls._transform_pseudorange(read_uint(bitstream, 25))
         (
             result.l1["pseudorange_diff"],
             result.l1["pseudorange_valid"],
-        ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
-        result.l1["lock_time"] = bitstream.read(7).uint
+        ) = cls._transform_pseudorange_diff(read_int(bitstream, 20))
+        result.l1["lock_time"] = read_uint(bitstream, 7)
         if is_extended:
-            result.l1["ambiguity"] = bitstream.read(7).uint
+            result.l1["ambiguity"] = read_uint(bitstream, 7)
             result.l1["cnr"] = (
-                bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
+                read_uint(bitstream, 8) * RTCMParams.CARRIER_NOISE_RATIO_UNITS
             )
 
         # Now the L2 signal. Its frequency channel is not transmitted
         # separately in either 1011 or 1012 packets
         if has_l2:
             result.l2 = {}
-            result.l2["code"] = bitstream.read(2).uint
+            result.l2["code"] = read_uint(bitstream, 2)
             result.l2["freq"] = 0
             # L2-L1 pseudorange difference, signed
-            result.l2["pseudorange"] = cls._transform_rangeincr(bitstream.read(14).int)
+            result.l2["pseudorange"] = cls._transform_rangeincr(read_int(bitstream, 14))
             (
                 result.l2["pseudorange_diff"],
                 result.l2["pseudorange_valid"],
-            ) = cls._transform_pseudorange_diff(bitstream.read(20).int)
-            result.l2["lock_time"] = bitstream.read(7).uint
+            ) = cls._transform_pseudorange_diff(read_int(bitstream, 20))
+            result.l2["lock_time"] = read_uint(bitstream, 7)
             if is_extended:
                 result.l2["cnr"] = (
-                    bitstream.read(8).uint * RTCMParams.CARRIER_NOISE_RATIO_UNITS
+                    read_uint(bitstream, 8) * RTCMParams.CARRIER_NOISE_RATIO_UNITS
                 )
         else:
             result.l2 = None
@@ -583,7 +586,7 @@ class RTCMV3MSMSatelliteInfo:
     @staticmethod
     def update_satellite_data(
         objects: list[RTCMV3MSMSatelliteInfo],
-        bitstream: ConstBitStream,
+        bitstream: Reader,
         is_high_resolution: bool = False,
     ):
         """Updates multiple satellite info object with the satellite-related
@@ -591,21 +594,21 @@ class RTCMV3MSMSatelliteInfo:
         RTCMV3MSMPacket_ packet.
         """
         for obj in objects:
-            obj.range = bitstream.read("uint:8") * RTCMParams.RANGE_UNIT_MSM
+            obj.range = read_uint(bitstream, 8) * RTCMParams.RANGE_UNIT_MSM
 
         if is_high_resolution:
             for obj in objects:
-                obj.extended_info = bitstream.read("uint:4")
+                obj.extended_info = read_uint(bitstream, 4)
         else:
             for obj in objects:
                 obj.extended_info = None
 
         for obj in objects:
-            obj.rng_m = bitstream.read("uint:10")
+            obj.rng_m = read_uint(bitstream, 10)
 
         if is_high_resolution:
             for obj in objects:
-                obj.rate = bitstream.read("int:14")
+                obj.rate = read_int(bitstream, 14)
         else:
             for obj in objects:
                 obj.rate = None
@@ -613,7 +616,7 @@ class RTCMV3MSMSatelliteInfo:
     @staticmethod
     def update_signal_data(
         objects: list[RTCMV3MSMSignal],
-        bitstream: ConstBitStream,
+        bitstream: Reader,
         last_digit_of_packet_type: int,
     ):
         # TODO(ntamas): store these; see the RTKLIB source code for details
@@ -621,35 +624,35 @@ class RTCMV3MSMSatelliteInfo:
 
         if last_digit_of_packet_type in (6, 7):
             for _ in objects:
-                bitstream.read("int:20")  # pseudorange
+                read_int(bitstream, 20)  # pseudorange
             for _ in objects:
-                bitstream.read("int:24")  # phase range
+                read_int(bitstream, 24)  # phase range
             for _ in objects:
-                bitstream.read("uint:10")  # lock time
+                read_uint(bitstream, 10)  # lock time
         else:
             for _ in objects:
-                bitstream.read("int:15")  # pseudorange
+                read_int(bitstream, 15)  # pseudorange
             for _ in objects:
-                bitstream.read("int:22")  # phase range
+                read_int(bitstream, 22)  # phase range
             for _ in objects:
-                bitstream.read("uint:4")  # lock time
+                read_uint(bitstream, 4)  # lock time
 
         for _ in objects:
-            bitstream.read("bool")  # half-cycle ambiguity
+            read_bool(bitstream)  # half-cycle ambiguity
 
         if last_digit_of_packet_type in (6, 7):
             for obj in objects:
                 obj["cnr"] = (
-                    bitstream.read("uint:10")
+                    read_uint(bitstream, 10)
                     * RTCMParams.CARRIER_NOISE_RATIO_HIRES_UNITS
                 )
         else:
             for obj in objects:
-                obj["cnr"] = bitstream.read("uint:6")
+                obj["cnr"] = read_uint(bitstream, 6)
 
         if last_digit_of_packet_type in (5, 7):  # not a typo
             for _ in objects:
-                bitstream.read("int:15")  # phase range rate
+                read_int(bitstream, 15)  # phase range rate
 
     def add_empty_signal_data(self, signal_id: int):
         """Adds a placeholder for the data related to the signal with the given
@@ -729,7 +732,7 @@ class RTCMV3GPSRTKPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3GPSSatellit
     smoothing_interval: int
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: BitStream):
+    def create(cls, packet_type: int, bitstream: Reader):
         """Creates an RTCM v3 GPS RTK packet from the given bit stream.
 
         Parameters:
@@ -745,12 +748,12 @@ class RTCMV3GPSRTKPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3GPSSatellit
         is_extended = packet_type in (1002, 1004)
 
         result = cls(packet_type)
-        result.station_id = bitstream.read(12).uint
-        result.tow = bitstream.read(30).uint * 0.001
-        result.sync = bitstream.read(1).bool
-        satellite_count: int = bitstream.read(5).uint
-        result.smoothed = bitstream.read(1).bool
-        result.smoothing_interval = bitstream.read(3).uint
+        result.station_id = read_uint(bitstream, 12)
+        result.tow = read_uint(bitstream, 30) * 0.001
+        result.sync = read_bool(bitstream)
+        satellite_count: int = read_uint(bitstream, 5)
+        result.smoothed = read_bool(bitstream)
+        result.smoothing_interval = read_uint(bitstream, 3)
         result.satellites = []
 
         for _i in range(satellite_count):
@@ -803,7 +806,7 @@ class RTCMV3StationaryAntennaPacket(RTCMV3Packet):
     position: ECEFCoordinate
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: ConstBitStream):
+    def create(cls, packet_type: int, bitstream: Reader):
         """Creates an RTCM v3 stationary antenna packet from the given bit
         stream.
 
@@ -817,17 +820,17 @@ class RTCMV3StationaryAntennaPacket(RTCMV3Packet):
         assert packet_type == 1005 or packet_type == 1006
 
         result = cls(packet_type)
-        result.station_id = bitstream.read(12).uint
+        result.station_id = read_uint(bitstream, 12)
 
-        bitstream.read(6)  # reserved
-        result.system = bitstream.read(3).uint
-        result.is_reference_station = bitstream.read(1).bool
-        ref_x = bitstream.read(38).int
-        result.single_receiver = bitstream.read(1).bool
-        bitstream.read(1)
-        ref_y = bitstream.read(38).int
-        bitstream.read(2)
-        ref_z = bitstream.read(38).int
+        bitstream.read_bits(6)  # reserved
+        result.system = read_uint(bitstream, 3)
+        result.is_reference_station = read_bool(bitstream)
+        ref_x = read_int(bitstream, 38)
+        result.single_receiver = read_bool(bitstream)
+        bitstream.read_bits(1)
+        ref_y = read_int(bitstream, 38)
+        bitstream.read_bits(2)
+        ref_z = read_int(bitstream, 38)
 
         if packet_type == 1005:
             # No height information in this packet
@@ -835,7 +838,7 @@ class RTCMV3StationaryAntennaPacket(RTCMV3Packet):
         elif packet_type == 1006:
             # This packet has height information
             result.antenna_height = (
-                bitstream.read(16).uint * RTCMParams.ANTENNA_POSITION_RESOLUTION
+                read_uint(bitstream, 16) * RTCMParams.ANTENNA_POSITION_RESOLUTION
             )
         else:
             raise ValueError("Invalid packet type: {0}".format(packet_type))
@@ -871,7 +874,7 @@ class RTCMV3AntennaDescriptorPacket(RTCMV3Packet):
     serial: str | None
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: ConstBitStream):
+    def create(cls, packet_type: int, bitstream: Reader):
         """Creates an RTCM v3 antenna descriptor packet from the given bit
         stream.
 
@@ -885,9 +888,9 @@ class RTCMV3AntennaDescriptorPacket(RTCMV3Packet):
         assert packet_type in (1007, 1008)
 
         result = cls(packet_type)
-        result.station_id = bitstream.read(12).uint
+        result.station_id = read_uint(bitstream, 12)
         result.descriptor = cls._read_string(bitstream)
-        result.setup_id = bitstream.read(8).uint
+        result.setup_id = read_uint(bitstream, 8)
         if packet_type == 1008:
             result.serial = cls._read_string(bitstream)
         else:
@@ -896,9 +899,9 @@ class RTCMV3AntennaDescriptorPacket(RTCMV3Packet):
         return result
 
     @staticmethod
-    def _read_string(bitstream: ConstBitStream):
-        n = bitstream.read(8).uint
-        return "".join(chr(bitstream.read(8).uint) for _ in range(n))
+    def _read_string(bitstream: Reader):
+        n = read_uint(bitstream, 8)
+        return "".join(chr(read_uint(bitstream, 8)) for _ in range(n))
 
     def __repr__(self):
         return (
@@ -922,19 +925,19 @@ class RTCMV3GLONASSRTKPacket(
     smoothing_interval: int
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: ConstBitStream):
+    def create(cls, packet_type: int, bitstream: Reader):
         assert packet_type in (1009, 1010, 1011, 1012)
 
         has_l2 = packet_type in (1011, 1012)
         is_extended = packet_type in (1010, 1012)
 
         result = cls(packet_type)
-        result.station_id = bitstream.read(12).uint
-        result.tod = bitstream.read(27).uint * 0.001
-        result.sync = bitstream.read(1).bool
-        satellite_count = bitstream.read(5).uint
-        result.smoothed = bitstream.read(1).bool
-        result.smoothing_interval = bitstream.read(3).uint
+        result.station_id = read_uint(bitstream, 12)
+        result.tod = read_uint(bitstream, 27) * 0.001
+        result.sync = read_bool(bitstream)
+        satellite_count = read_uint(bitstream, 5)
+        result.smoothed = read_bool(bitstream)
+        result.smoothing_interval = read_uint(bitstream, 3)
         result.satellites = []
 
         for _i in range(satellite_count):
@@ -1011,7 +1014,7 @@ class RTCMV3GPSEphemerisPacket(RTCMV3Packet):
     fit: int
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: ConstBitStream):
+    def create(cls, packet_type: int, bitstream: Reader):
         """Creates an RTCM v3 GPS ephemeris packet from the given bit
         stream.
 
@@ -1033,36 +1036,36 @@ class RTCMV3GPSEphemerisPacket(RTCMV3Packet):
         # The field names are renamed match the ones here:
         # http://www.trimble.com/OEM_ReceiverHelp/V4.44/en/ICD_Pkt_Response55h_GPSEph.html
 
-        result.svid = bitstream.read(6).uint
-        result.week = bitstream.read(10).uint
-        result.acc = bitstream.read(4).uint
-        result.l2code = bitstream.read(2).uint
-        result.i_dot = bitstream.read(14).int  # 3
-        result.iode = bitstream.read(8).uint  # 3
-        result.toc = bitstream.read(16).uint  # 3
-        result.af2 = bitstream.read(8).int  # 3
-        result.af1 = bitstream.read(16).int  # 3
-        result.af0 = bitstream.read(22).int  # 3
-        result.iodc = bitstream.read(10).uint
-        result.crs = bitstream.read(16).int  #
-        result.delta_n = bitstream.read(16).int  # 2
-        result.m0 = bitstream.read(32).int  # 2
-        result.cuc = bitstream.read(16).int  #
-        result.eccentricity = bitstream.read(32).uint  # 2
-        result.cus = bitstream.read(16).int  #
-        result.sqrt_a = bitstream.read(32).uint  # 2
-        result.toe = bitstream.read(16).uint  # 3
-        result.cic = bitstream.read(16).int  #
-        result.omega0 = bitstream.read(32).int  # 2
-        result.cis = bitstream.read(16).int  #
-        result.i0 = bitstream.read(32).int  # 2
-        result.crc = bitstream.read(16).int  #
-        result.omega = bitstream.read(32).int  # 2
-        result.omega_dot = bitstream.read(24).int  # 2
-        result.tgd = bitstream.read(8).int  # 3
-        result.health = bitstream.read(6).uint
-        result.l2p = bitstream.read(1).uint
-        result.fit = bitstream.read(1).uint
+        result.svid = read_uint(bitstream, 6)
+        result.week = read_uint(bitstream, 10)
+        result.acc = read_uint(bitstream, 4)
+        result.l2code = read_uint(bitstream, 2)
+        result.i_dot = read_int(bitstream, 14)  # 3
+        result.iode = read_uint(bitstream, 8)  # 3
+        result.toc = read_uint(bitstream, 16)  # 3
+        result.af2 = read_int(bitstream, 8)  # 3
+        result.af1 = read_int(bitstream, 16)  # 3
+        result.af0 = read_int(bitstream, 22)  # 3
+        result.iodc = read_uint(bitstream, 10)
+        result.crs = read_int(bitstream, 16)  #
+        result.delta_n = read_int(bitstream, 16)  # 2
+        result.m0 = read_int(bitstream, 32)  # 2
+        result.cuc = read_int(bitstream, 16)  #
+        result.eccentricity = read_uint(bitstream, 32)  # 2
+        result.cus = read_int(bitstream, 16)  #
+        result.sqrt_a = read_uint(bitstream, 32)  # 2
+        result.toe = read_uint(bitstream, 16)  # 3
+        result.cic = read_int(bitstream, 16)  #
+        result.omega0 = read_int(bitstream, 32)  # 2
+        result.cis = read_int(bitstream, 16)  #
+        result.i0 = read_int(bitstream, 32)  # 2
+        result.crc = read_int(bitstream, 16)  #
+        result.omega = read_int(bitstream, 32)  # 2
+        result.omega_dot = read_int(bitstream, 24)  # 2
+        result.tgd = read_int(bitstream, 8)  # 3
+        result.health = read_uint(bitstream, 6)
+        result.l2p = read_uint(bitstream, 1)
+        result.fit = read_uint(bitstream, 1)
 
         return result
 
@@ -1136,7 +1139,7 @@ class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
     firmware: str
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: ConstBitStream):
+    def create(cls, packet_type: int, bitstream: Reader):
         """Creates an RTCM v3 extended antenna descriptor packet from the
         given bit stream.
 
@@ -1151,9 +1154,9 @@ class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
         assert packet_type == 1033
 
         result = cls(packet_type)
-        result.station_id = bitstream.read(12).uint
+        result.station_id = read_uint(bitstream, 12)
         result.descriptor = cls._read_string(bitstream)
-        result.setup_id = bitstream.read(8).uint
+        result.setup_id = read_uint(bitstream, 8)
         result.serial = cls._read_string(bitstream)
         result.receiver = cls._read_string(bitstream)
         result.firmware = cls._read_string(bitstream)
@@ -1162,8 +1165,8 @@ class RTCMV3ExtendedAntennaDescriptorPacket(RTCMV3Packet):
 
     @staticmethod
     def _read_string(bitstream):
-        n = bitstream.read(8).uint
-        return "".join(chr(bitstream.read(8).uint) for _ in range(n))
+        n = read_uint(bitstream, 8)
+        return "".join(chr(read_uint(bitstream, 8)) for _ in range(n))
 
     def __repr__(self):
         return (
@@ -1215,7 +1218,7 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteIn
     smoothing_interval: int
 
     @classmethod
-    def create(cls, packet_type: int, bitstream: ConstBitStream):
+    def create(cls, packet_type: int, bitstream: Reader):
         """Creates an RTCM v3 GPS MSM packet from the given bit stream.
 
         Parameters:
@@ -1232,27 +1235,27 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteIn
 
         result = cls(packet_type)
 
-        result.station_id = bitstream.read(12).uint
-        result.tow = bitstream.read(30).uint * 0.001
-        result.sync = bitstream.read(1).bool
-        result.iod = bitstream.read(3).uint
+        result.station_id = read_uint(bitstream, 12)
+        result.tow = read_uint(bitstream, 30) * 0.001
+        result.sync = read_bool(bitstream)
+        result.iod = read_uint(bitstream, 3)
 
-        result.time_s = bitstream.read(7).uint
-        result.clk_str = bitstream.read(2).uint
-        result.clk_ext = bitstream.read(2).uint
-        result.smoothed = bitstream.read(1).bool
-        result.smoothing_interval = bitstream.read(3).uint
+        result.time_s = read_uint(bitstream, 7)
+        result.clk_str = read_uint(bitstream, 2)
+        result.clk_ext = read_uint(bitstream, 2)
+        result.smoothed = read_bool(bitstream)
+        result.smoothing_interval = read_uint(bitstream, 3)
 
-        satellite_mask = bitstream.read(64)
+        satellite_mask = bitstream.read_bits(64)
         satellite_ids = [index + 1 for index, bit in enumerate(satellite_mask) if bit]  # type: ignore
         num_satellites = len(satellite_ids)
 
-        signal_mask = bitstream.read(32)
+        signal_mask = bitstream.read_bits(32)
         signal_ids = [index + 1 for index, bit in enumerate(signal_mask) if bit]  # type: ignore
         num_signals = len(signal_ids)
 
         cell_mask_length = num_satellites * num_signals
-        cell_mask = bitstream.read(cell_mask_length)
+        cell_mask = bitstream.read_bits(cell_mask_length)
 
         if packet_type < 1080:
             # GPS packet
@@ -1346,7 +1349,7 @@ class RTCMV3MSMPacket(RTCMV3Packet, SatelliteContainerMixin[RTCMV3MSMSatelliteIn
 RTCMPacket = RTCMV2Packet | RTCMV3Packet
 
 
-def create_rtcm2_packet(bitstream: ConstBitStream) -> RTCMV2Packet:
+def create_rtcm2_packet(bitstream: Reader) -> RTCMV2Packet:
     """Creates an RTCM V2 packet from a bit stream containing the payload
     of the packet, without the preamble and the parity bits.
 
@@ -1356,12 +1359,12 @@ def create_rtcm2_packet(bitstream: ConstBitStream) -> RTCMV2Packet:
     Returns:
         the packet data parsed out of the bitstream
     """
-    original_data = bitstream.tobytes()
+    original_data = bitstream.bits.to_bytes()
 
-    packet_type: int = bitstream.read(6).uint
-    station_id: int = bitstream.read(10).uint
-    modified_z_count: int = bitstream.read(13).uint
-    bitstream.read(11)
+    packet_type: int = read_uint(bitstream, 6)
+    station_id: int = read_uint(bitstream, 10)
+    modified_z_count: int = read_uint(bitstream, 13)
+    bitstream.read_bits(11)
 
     packet_class = RTCMV2Packet._packet_classes.get(packet_type)
     if packet_class:
@@ -1376,7 +1379,7 @@ def create_rtcm2_packet(bitstream: ConstBitStream) -> RTCMV2Packet:
     return result
 
 
-def create_rtcm3_packet(bitstream: ConstBitStream) -> RTCMV3Packet:
+def create_rtcm3_packet(bitstream: Reader) -> RTCMV3Packet:
     """Creates an RTCM V3 packet from a bit stream containing the payload
     of the packet, without the preamble and the length bytes.
 
@@ -1386,9 +1389,9 @@ def create_rtcm3_packet(bitstream: ConstBitStream) -> RTCMV3Packet:
     Returns:
         the packet data parsed out of the bitstream
     """
-    original_data = bitstream.tobytes()
+    original_data = bitstream.bits.to_bytes()
 
-    packet_type: int = bitstream.read(12).uint
+    packet_type: int = read_uint(bitstream, 12)
     packet_class = RTCMV3Packet._packet_classes.get(packet_type)
     if packet_class:
         result = packet_class.create(packet_type, bitstream)

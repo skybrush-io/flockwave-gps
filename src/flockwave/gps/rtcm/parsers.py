@@ -12,7 +12,7 @@ from typing import (
     TypeVar,
 )
 
-from bitstring import ConstBitStream
+from bitstring import Bits, Reader
 
 from flockwave.gps.crc import crc24q
 
@@ -253,7 +253,7 @@ class RTCMV2Parser(RTCMParserBase[RTCMV2Packet]):
         Returns:
             the parsed RTCM V2 packet
         """
-        bitstream = ConstBitStream(packet[1:])
+        bitstream = Reader(Bits.from_bytes(packet[1:]))
         return create_rtcm2_packet(bitstream)
 
     def _recover_from_checksum_mismatch(
@@ -370,7 +370,7 @@ class RTCMV3Parser(RTCMParserBase[RTCMV3Packet]):
         Returns:
             the parsed RTCM V3 packet
         """
-        bitstream = ConstBitStream(packet[3:])
+        bitstream = Reader(Bits.from_bytes(packet[3:]))
         return create_rtcm3_packet(bitstream)
 
     def _recover_from_checksum_mismatch(self, packet: bytearray, parity: bytearray):
@@ -490,11 +490,11 @@ class RTCMFormatAutodetectingParser(RTCMParser[RTCMPacket]):
         nothing to recover.
         """
         for parser, ex in self._pending_checksum_errors:
-            recovered_packets = parser._recover_from_checksum_mismatch(
-                ex.packet, ex.parity
+            recovered_packets = list(
+                parser._recover_from_checksum_mismatch(ex.packet, ex.parity)
             )
             if recovered_packets:
-                return list(recovered_packets), parser
+                return recovered_packets, parser
         return [], None
 
 

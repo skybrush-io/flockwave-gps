@@ -3,7 +3,9 @@
 from operator import attrgetter
 from typing import Iterable, TypeVar
 
-__all__ = ("count_bits", "get_best_satellites")
+from bitstring import Reader
+
+__all__ = ("count_bits", "get_best_satellites", "read_bool", "read_int", "read_uint")
 
 # Construct a helper table for the _count_bits function
 _count_bits_table = [0] * 256
@@ -48,3 +50,22 @@ def get_best_satellites(satellites: Iterable[T], count: int | None = None) -> li
     if count is not None:
         top[count:] = []
     return top
+
+
+def read_bool(reader: Reader) -> bool:
+    """Reads a single bit from the given reader as a boolean."""
+    return reader.read_bits(1).bool
+
+
+def read_int(reader: Reader, num_bits: int) -> int:
+    """Reads a big-endian signed integer of the given width from the given
+    reader.
+    """
+    return reader.read_bits(num_bits).i
+
+
+def read_uint(reader: Reader, num_bits: int) -> int:
+    """Reads a big-endian unsigned integer of the given width from the given
+    reader.
+    """
+    return reader.read_bits(num_bits).u

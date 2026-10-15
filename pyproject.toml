@@ -4,8 +4,8 @@ version = "5.0.2"
 description = "GPS and geography related routines and classes"
 authors = [{ name = "Tamas Nepusz", email = "tamas@collmot.com" }]
 license = "MIT"
-requires-python = ">=3.10"
-dependencies = ["bitstring>=4.0.1,<5.0.0", "pynmea2>=1.19.0"]
+requires-python = ">=3.11"
+dependencies = ["bitstring>=5.0.0,<6.0.0", "pynmea2>=1.19.0"]
 
 [project.optional-dependencies]
 cli = ["click>=8.1.0", "trio>=0.30.0"]
